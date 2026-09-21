@@ -6,3 +6,6 @@ requests
 streamlit
 google-genai
 pypdf
+sentence-transformers
+numpy
+qdrant-client
