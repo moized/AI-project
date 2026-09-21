@@ -1,35 +1,44 @@
-# Tools / Data Specialist Context
+# TOOLS & DATA AI CONTEXT
 
 ## Objective
-Provide robust, versioned test datasets, evaluation benchmarks, and deterministic structured tools (e.g., calculator, free/mock web search, database query helpers) for the AI Research Assistant.
+AI Araç ve Veri Katmanı'nı geliştirmek; ajanın (Agent) kararlar alırken kullanabileceği yapılandırılmış araçların (tools) şemalarını, fonksiyonlarını ve proje için gerekli test/örnek veri setlerini yönetmek.
 
 ## Responsibility
-- Generate and manage versioned test datasets, sample technical documents, and retrieval ground-truth evaluation data in the `data/` directory.
-- Implement reusable structured tools with standardized schemas (Pydantic / JSON Schema) that can be safely invoked by the Agent layer.
-- Ensure test data covers edge cases, expected failure modes, and standard query-response pairs.
+1. Ajan tarafından kullanılacak araçların (örn. hesap makinesi, doküman arama, bilgi getirme vb.) Pydantic veya JSON şemalarını tanımlamak.
+2. Bu araçların python tabanlı çalıştırılabilir fonksiyonlarını yazmak.
+3. RAG ve diğer katmanların ihtiyaç duyduğu örnek dokümanları (`data/samples/`) ve test verilerini (`data/evaluation/ground_truth.json`) düzenlemek ve yönetmek.
 
 ## Inputs
-- Tool definitions, requirements, and schema specifications from the Agent specialist and Coordinator.
-- Requirements for evaluation metrics from the RAG and Agent layers.
+- Sistem gereksinimleri ve ajan katmanının araç ihtiyaçları.
+- Mevcut örnek dokümanlar ve veri spesifikasyonları (`data/data_specification.txt`).
 
 ## Expected Outputs
-- Versioned sample documents and evaluation datasets stored under `data/`.
-- Reusable tool modules with explicit input/output schemas.
-- Unit tests for all implemented tools and data generation scripts.
-
-## Constraints
-- **Cost:** Must be entirely deterministic, offline-capable, and cost-free where possible.
-- **Reproducibility:** Test datasets must be versioned and reproducible.
+- `contracts/tools_contract.json` (veya Python karşılığı): Araçların giriş/çıkış şemaları.
+- Araç fonksiyonlarının implementasyonları.
+- Gerekli test veri setleri.
 
 ## Dependencies
-- Supplies sample documents and evaluation datasets to the RAG specialist.
-- Provides tool schemas and execution functions consumed by the Agent specialist.
+- Bu katman projenin temelini oluşturur; diğer katmanlara (RAG, Agent) doğrudan bağımlılığı yoktur ancak ilk sırada tamamlanmalıdır.
+
+## Interfaces
+- Ajan katmanının doğrudan çağırabileceği Python fonksiyonları ve JSON şemaları.
+
+## Constraints
+- Sıfır veya sıfıra yakın maliyet (yerel Python kütüphaneleri ve hafif yapılar).
+- Token verimliliği ve net, anlaşılır şemalar.
+
+## Relevant Technologies
+- Python
+- Pydantic
+- JSON
 
 ## Required Deliverables
-- Test datasets and sample documents in `data/`.
-- Tool implementation modules with Pydantic schemas.
-- Tool and data validation unit tests.
+1. Araç şemaları ve fonksiyon tanımları.
+2. `contracts/tools_contract.json` sözleşmesi.
+3. Birim testleri (Unit tests) için test senaryoları.
 
-## What Not To Do
-- Do not implement the main backend API or frontend UI.
-- Do not make external paid API calls for tool execution without explicit coordinator approval.
+## What Must Not Be Changed
+- Read-only olarak işaretlenen temel kök dizin dosyaları ve mevcut ground-truth yapısı (koordinatör onayı olmadan bozulmamalıdır).
+
+## Testing Requirements
+- Her aracın (Tool) farklı girdilerle doğru sonuç döndürdüğünü doğrulayan birim testleri yazılmalıdır.
