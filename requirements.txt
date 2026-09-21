@@ -5,3 +5,4 @@ pydantic
 requests
 streamlit
 google-genai
+pypdf
