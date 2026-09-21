@@ -9,11 +9,11 @@ class ResearchAgent:
         self.rag = SimpleRAGPipeline()
         self.tools = TOOL_FUNCTIONS
         
-        # Google GenAI API yapılandırması (google-genai paketi)
+        # Google GenAI API yapılandırması (google-genai paketi ve güncel rehberlik)
         api_key = os.getenv("GEMINI_API_KEY")
+        self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         if api_key:
             self.client = genai.Client(api_key=api_key)
-            self.model_name = 'gemini-2.5-flash'
         else:
             self.client = None
 
@@ -31,10 +31,10 @@ class ResearchAgent:
         # Esnek selamlama ve yardım talebi kontrolü
         greetings = ["merhaba", "selam", "hello", "hi", "hey", "nasılsın", "günaydın", "iyi günler"]
         if any(g in query_lower for g in greetings) or "nasıl yardımcı" in query_lower:
-            response["answer"] = "Merhaba! Ben AI Araştırma Asistanıyım. Size teknik dokümanlar hakkında yardımcı olabilir, hesaplama yapabilir veya güncel tarihi söyleyebilirim. Nasıl yardımcı olabilirim?"
+            response["answer"] = "Merhaba! Ben AI Araştırma Asistanıyım. Size yüklediğiniz dokümanlar hakkında yardımcı olabilir, hesaplama yapabilir veya güncel tarihi söyleyebilirim. Nasıl yardımcı olabilirim?"
             return response
 
-        # 1. Basit Araç Tetikleme Kontrolü (örn: tarih veya hesaplama)
+        # 1. Basit Araç Tetikleme Kontrolü (tarih veya hesaplama)
         if "tarih" in query_lower:
             date_func = self.tools.get("get_current_date")
             if date_func:
@@ -54,7 +54,7 @@ class ResearchAgent:
                         response["answer"] = f"Hesaplama sonucu: {res}"
                         return response
 
-        # 2. RAG ile Bilgi Getirme (Retrieval)
+        # 2. RAG ile Bilgi Getirme (Retrieval) - Kara Kutu Olarak Kullanım
         retrieved_chunks = self.rag.retrieve(query, top_k=3)
         sources = []
         context_texts = []
@@ -88,12 +88,14 @@ Yanıt:"""
                 )
                 response["answer"] = gemini_response.text
             except Exception as e:
-                response["answer"] = f"Google GenAI API hatası oluştu: {str(e)}. Bulunan doküman özeti: {context_str[:300]}"
+                if context_texts:
+                    response["answer"] = f"[LLM Hatası: {str(e)}] Bulunan doküman özeti:\n{context_str[:500]}"
+                else:
+                    response["answer"] = f"Google GenAI API hatası oluştu ve eşleşen doküman bulunamadı: {str(e)}"
         else:
-            # API anahtarı yoksa fallback olarak RAG bağlamını döndür
             if context_texts:
-                response["answer"] = f"[GEMINI_API_KEY bulunamadı, RAG Özeti] {context_str[:400]}..."
+                response["answer"] = f"[GEMINI_API_KEY tanımlı değil, RAG Özeti] {context_str[:600]}..."
             else:
-                response["answer"] = f"'{query}' ile ilgili eşleşen bir doküman bulamadım. Lütfen 'architecture', 'gemini' veya 'react' gibi anahtar kelimeler deneyin."
+                response["answer"] = f"'{query}' ile ilgili eşleşen bir doküman bulamadım. Lütfen geçerli bir anahtar kelime girin veya doküman yükleyin."
 
         return response
