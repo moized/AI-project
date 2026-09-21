@@ -6,12 +6,12 @@ Build and maintain a robust, high-performance, and cost-effective backend API an
 ## Responsibility
 - Expose secure and well-documented REST and/or WebSocket APIs (using FastAPI) for frontend interaction and agent execution.
 - Manage database schemas and persistence (using lightweight local databases like SQLite) for metadata, chat history, user sessions, and document references.
-- Integrate smoothly with the RAG retrieval module and the Agent execution loop.
+- Integrate smoothly with the completed RAG retrieval module (`rag/rag_pipeline.py`) and the Agent execution loop (`agent/agent_core.py`).
 - Ensure efficient error handling, request validation (Pydantic), and minimal latency.
 
 ## Inputs
 - API specifications and contracts defined by the Coordinator.
-- Data model requirements from RAG and Agent specialists.
+- Data model requirements and outputs from RAG and Agent layers.
 - User requests forwarded from the Frontend/Deployment layer.
 
 ## Expected Outputs
@@ -26,8 +26,8 @@ Build and maintain a robust, high-performance, and cost-effective backend API an
 - **Maintainability:** Clear separation of concerns between API routers, database services, and external layer integrations.
 
 ## Dependencies
-- Consumes the retrieval interface provided by the RAG specialist.
-- Invokes the core logic of the Agent specialist.
+- Consumes the retrieval interface provided by the RAG specialist (`rag/rag_pipeline.py`).
+- Invokes the core logic of the Agent specialist (`agent/agent_core.py`).
 - Serves requests from the Frontend/Deployment layer.
 
 ## Required Deliverables
