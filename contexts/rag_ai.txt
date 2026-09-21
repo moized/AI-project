@@ -4,20 +4,20 @@
 Implement a robust, cost-effective, and production-ready document ingestion, chunking, embedding, indexing, and retrieval pipeline for technical documents in the AI Research Assistant.
 
 ## Responsibility
-- Parse and chunk various document formats (PDF, Markdown, TXT) efficiently.
-- Generate embeddings using local/free models or cost-effective APIs (e.g., Sentence Transformers or Gemini embedding free tier).
+- Parse and chunk various document formats (PDF, Markdown, TXT) efficiently, leveraging sample documents provided by the Tools & Data layer (`data/samples/`).
+- Generate embeddings using local/free models (e.g., Sentence Transformers) or cost-effective APIs to maintain zero/near-zero cost.
 - Store and query vectors using lightweight, local vector databases (e.g., Chroma, FAISS, or DuckDB).
-- Expose a clean, well-defined retrieval function/interface for the Agent and Backend layers.
+- Expose a clean, well-defined retrieval function/interface conforming to `contracts/rag_contract.json` for the Agent and Backend layers.
 - Maintain retrieval accuracy, low latency, and deterministic chunking strategies.
 
 ## Inputs
-- Raw technical documents and evaluation datasets from the Tools/Data layer (`data/`).
+- Sample technical documents and evaluation datasets from the Tools & Data layer (`data/samples/`).
 - Query strings and retrieval parameters from the Agent/Backend layers.
 
 ## Expected Outputs
 - RAG pipeline scripts and modules for ingestion, embedding, and storage.
-- Standardized retrieval function conforming to the RAG contract (`contracts/rag_contract.json` or equivalent).
-- Evaluation hooks to measure retrieval relevance (e.g., hit rate, MRR).
+- `contracts/rag_contract.json` defining the query format, retrieved chunks, and citation structure.
+- Evaluation hooks to measure retrieval relevance (e.g., hit rate, MRR) aligned with evaluation datasets.
 
 ## Constraints
 - **Cost:** Zero or near-zero monetary cost (prefer local vector stores and local/free embedding models).
@@ -25,15 +25,24 @@ Implement a robust, cost-effective, and production-ready document ingestion, chu
 - **Performance:** Low latency retrieval suitable for real-time chat interactions.
 
 ## Dependencies
-- Relies on test data and sample documents provided by the Tools/Data layer.
+- Relies on test data and sample documents provided by the Tools & Data layer (`data/samples/`).
 - Provides retrieval output consumed directly by the Agent layer and exposed via the Backend API.
 
+## Relevant Technologies
+- Python
+- Sentence Transformers / Local Embeddings
+- Lightweight Vector Store (Chroma / FAISS / DuckDB)
+- JSON / Contracts
+
 ## Required Deliverables
-- Document ingestion and chunking module.
-- Vector store indexing script.
-- Retrieval interface module.
-- Unit tests and retrieval evaluation suite.
+1. `contracts/rag_contract.json` (RAG sözleşmesi).
+2. Document ingestion and chunking module.
+3. Vector store indexing script and retrieval interface module.
+4. Unit tests and retrieval evaluation suite.
 
 ## What Not To Do
 - Do not implement the Agent logic, tool execution, or user interface.
 - Do not make external paid API calls for embeddings without explicit coordinator approval.
+
+## Testing Requirements
+- Verify that chunking preserves semantic meaning and retrieval correctly fetches relevant sample documents based on test queries.
