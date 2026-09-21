@@ -1,0 +1,27 @@
+{
+  "tools": [
+    {
+      "name": "calculator",
+      "description": "Temel matematiksel hesaplamaları güvenli bir şekilde yapar.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "expression": {
+            "type": "string",
+            "description": "Hesaplanacak matematiksel ifade, örn. '2 + 2' veya '10 * 5'."
+          }
+        },
+        "required": ["expression"]
+      }
+    },
+    {
+      "name": "get_current_date",
+      "description": "Mevcut tarihi YYYY-MM-DD formatında döndürür.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}
