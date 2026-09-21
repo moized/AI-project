@@ -1,0 +1,27 @@
+# AI Research Assistant - İlk Veri Üretimi Spesifikasyonu
+
+Bu doküman, RAG (Doküman İşleme) ve Agent (Ajan) katmanlarının test edilmesi ve doğrulanması için gereken ilk örnek veri setlerinin yapısını ve kapsamını tanımlar.
+
+## 1. Kapsam ve Hedef
+- Projenin erken aşamalarında sistemin doküman okuma, parçalama (chunking), vektörleştirme ve getirme (retrieval) yeteneklerini test etmek.
+- Agent'ın dokümanlara dayalı doğru yanıtlar üretip üretemediğini ölçmek için temel bir değerlendirme (evaluation) veri seti sağlamak.
+
+## 2. Veri Bileşenleri (`data/` dizini altında)
+
+### A. Örnek Teknik Dokümanlar (`data/samples/`)
+En az 3 adet farklı format veya konuya sahip hafif teknik doküman:
+- **`rag_architecture.md`**: RAG sistemlerinin temel bileşenleri ve mimarisi hakkında teknik doküman.
+- **`gemini_api_guide.txt`**: Gemini API kullanımı ve ücretsiz katman sınırları hakkında rehber.
+- **`agent_react_pattern.md`**: ReAct (Reasoning and Acting) ajan döngüsünün çalışma mantığı.
+
+### B. Değerlendirme ve Ground-Truth Veri Seti (`data/evaluation/ground_truth.json`)
+Sistemin retrieval ve agent performansını test etmek için soru-cevap çiftleri:
+- Her kayıt aşağıdaki alanları içermelidir:
+  - `query_id`: Benzersiz tanımlayıcı (örn. `q_001`)
+  - `question`: Kullanıcının soracağı teknik soru
+  - `expected_sources`: Yanıtın dayanması gereken kaynak dosya adı
+  - `ground_truth_answer`: Beklenen doğru özet/yanıt
+
+## 3. Kısıtlar ve Kurallar
+- Tamamen yerel, çevrimdışı kullanılabilir ve maliyetsiz olmalıdır.
+- Sürüm kontrolü (Git) ile takip edilmelidir.
