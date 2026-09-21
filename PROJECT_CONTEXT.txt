@@ -1,0 +1,23 @@
+# PROJECT CONTEXT: AI Research Assistant
+
+## Ürün Tanımı
+Bu proje, teknik dokümanlarla çalışabilen, üretim kalitesine hazır (production-ready) bir **AI Araştırma Asistanı (AI Research Assistant)** geliştirmeyi amaçlar. Sistem, kullanıcıların doküman yüklemesini, bunları indekslemesini, ilgili bilgileri getirmesini (RAG), kaynak atıflı (citation) yanıtlar üretebilmesini, yapılandırılmış araçları (tools) kullanabilmesini ve bir ajan (agent) aracılığıyla akıllı kararlar alabilmesini sağlar.
+
+## Temel Kısıtlar ve İlkeler
+- **Maliyet:** Proje, Gemini ücretsiz katmanı (free tier) ve ücretsiz/yerel teknolojiler kullanılarak **sıfır veya sıfıra yakın maliyetle** inşa edilmelidir.
+- **Token Verimliliği:** Tüm katmanlarda token verimliliği temel bir kısıttır; en küçük yeterli bağlam ve net çıktılar tercih edilmelidir.
+- **Üretim Kalitesi (Production-Ready):** Kod tabanı test edilebilir, modüler ve dağıtıma (deployment) uygun olmalıdır.
+
+## Takım ve Geliştirme Yaklaşımı
+Proje, bağımsız uzman (specialist) AI geliştiriciler arasında bölünmüştür:
+1. **Tools & Data Specialist:** Araç şemaları ve test verileri.
+2. **Document Processing / RAG Specialist:** Doküman parçalama, embedding ve vektör veritabanı.
+3. **Agent Specialist:** ReAct döngüsü, Gemini entegrasyonu ve kaynak atıflı yanıt üretimi.
+4. **Backend / Database Specialist:** FastAPI endpoint'leri, oturum yönetimi ve veritabanı.
+5. **Frontend / Deployment Specialist:** Web arayüzü ve dağıtım yapılandırması.
+
+- **Kara Kutu (Black-Box) Yaklaşımı:** Her uzman kendi alanına derinlemesine odaklanır ve diğer bileşenleri kara kutu olarak ele alır. Bileşenler arası iletişim katı sözleşmeler (`contracts/`) üzerinden gerçekleşir.
+- **Koordinatörün Rolü:** Teknik Koordinatör / Sistem Mimarı, uzmanların çalışmalarını uyumlu hale getirir, sözleşmeleri tanımlar, bağımlılıkları yönetir ve entegrasyonu sağlar.
+
+## Genel Mimari ve Entegrasyon
+Sistem katmanları temel veriden ve araçlardan başlayarak sırayla (Tools & Data -> RAG -> Agent -> Backend -> Frontend) geliştirilir ve nihayetinde entegre edilerek tek bir ürün haline getirilir.
