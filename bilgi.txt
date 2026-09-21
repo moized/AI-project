@@ -1,0 +1,14 @@
+Merhaba! AI Araştırma Asistanı projesinin hangi bileşeni veya dizini hakkında bilgi almak istiyorsunuz? 
+
+Aşağıdaki alanlardan incelemek veya hakkında soru sormak istediğiniz birini seçebilirsiniz:
+- tools (Araç implementasyonları ve hesaplama/tarih araçları)
+- frontend (Streamlit arayüzü ve kullanıcı etkileşimi)
+- backend (FastAPI uç noktaları ve SQLite veritabanı)
+- agent (Google GenAI entegrasyonu, ReAct döngüsü ve karar mekanizması)
+- contexts (AI uzman bağlam dosyaları)
+- contracts (Katmanlar arası sözleşmeler ve JSON şemaları)
+- data (Örnek dokümanlar ve test veri setleri)
+- docs (Uygulama planları ve dokümantasyon)
+- tests (Birim ve entegrasyon testleri)
+
+Lütfen hangi konuda bilgi istediğinizi belirtin!
