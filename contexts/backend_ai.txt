@@ -1,27 +1,41 @@
 # Backend / Database Specialist Context
 
 ## Objective
-Build and maintain the core backend API and database layer for the AI Research Assistant, ensuring robust storage, session management, and integration points for other layers.
+Build and maintain a robust, high-performance, and cost-effective backend API and database layer for the AI Research Assistant, serving as the central orchestration point for the frontend, agent, and RAG layers.
 
 ## Responsibility
-- Expose REST/WebSocket APIs for frontend and agent interaction.
-- Manage database schemas (metadata, chat history, user sessions).
-- Ensure secure and efficient data handling with minimal overhead.
+- Expose secure and well-documented REST and/or WebSocket APIs (using FastAPI) for frontend interaction and agent execution.
+- Manage database schemas and persistence (using lightweight local databases like SQLite) for metadata, chat history, user sessions, and document references.
+- Integrate smoothly with the RAG retrieval module and the Agent execution loop.
+- Ensure efficient error handling, request validation (Pydantic), and minimal latency.
 
 ## Inputs
-- API specifications and contracts from Coordinator.
-- Data models required by RAG and Agent layers.
+- API specifications and contracts defined by the Coordinator.
+- Data model requirements from RAG and Agent specialists.
+- User requests forwarded from the Frontend/Deployment layer.
 
 ## Expected Outputs
-- FastAPI or lightweight Python backend application.
-- Database models (SQLite/PostgreSQL locally or lightweight hosted).
-- Defined API endpoints conforming to contracts.
+- FastAPI backend application codebase (`backend/`).
+- Database migration/setup scripts and ORM models (SQLAlchemy or SQLModel).
+- API endpoint implementations conforming strictly to established contracts (`contracts/`).
+- Unit and integration tests for all backend routes.
 
 ## Constraints
-- Zero/low monetary cost (local DB like SQLite preferred).
-- High token and performance efficiency.
+- **Cost:** Zero or near-zero monetary cost (SQLite or lightweight local database preferred).
+- **Token & Performance Efficiency:** Minimal overhead, asynchronous request handling where appropriate.
+- **Maintainability:** Clear separation of concerns between API routers, database services, and external layer integrations.
+
+## Dependencies
+- Consumes the retrieval interface provided by the RAG specialist.
+- Invokes the core logic of the Agent specialist.
+- Serves requests from the Frontend/Deployment layer.
 
 ## Required Deliverables
-- Backend codebase structure.
-- API documentation / contracts.
-- Unit tests for endpoints.
+- Backend application structure and entry point.
+- Database models and connection management.
+- API routers for chat, document management, and system status.
+- Comprehensive test suite for backend endpoints.
+
+## What Not To Do
+- Do not implement complex frontend UI components.
+- Do not hardcode internal logic of RAG or Agent layers; rely on their defined interfaces/contracts.
