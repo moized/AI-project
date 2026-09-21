@@ -13,7 +13,7 @@ class ResearchAgent:
         api_key = os.getenv("GEMINI_API_KEY")
         if api_key:
             self.client = genai.Client(api_key=api_key)
-            self.model_name = 'gemini-2.5-flash' # veya uygun güncel model
+            self.model_name = 'gemini-2.5-flash'
         else:
             self.client = None
 
@@ -28,9 +28,10 @@ class ResearchAgent:
 
         query_lower = query.lower().strip()
 
-        # Selamlama kontrolü
-        if query_lower in ["merhaba", "selam", "hello", "hi", "hey"]:
-            response["answer"] = "Merhaba! Ben AI Araştırma Asistanıyım. Size teknik dokümanlar hakkında yardımcı olabilir, hesaplama yapabilir veya güncel tarihi söyleyebilirim."
+        # Esnek selamlama ve yardım talebi kontrolü
+        greetings = ["merhaba", "selam", "hello", "hi", "hey", "nasılsın", "günaydın", "iyi günler"]
+        if any(g in query_lower for g in greetings) or "nasıl yardımcı" in query_lower:
+            response["answer"] = "Merhaba! Ben AI Araştırma Asistanıyım. Size teknik dokümanlar hakkında yardımcı olabilir, hesaplama yapabilir veya güncel tarihi söyleyebilirim. Nasıl yardımcı olabilirim?"
             return response
 
         # 1. Basit Araç Tetikleme Kontrolü (örn: tarih veya hesaplama)
@@ -93,6 +94,6 @@ Yanıt:"""
             if context_texts:
                 response["answer"] = f"[GEMINI_API_KEY bulunamadı, RAG Özeti] {context_str[:400]}..."
             else:
-                response["answer"] = f"'{query}' ile ilgili eşleşen bir doküman bulamadım."
+                response["answer"] = f"'{query}' ile ilgili eşleşen bir doküman bulamadım. Lütfen 'architecture', 'gemini' veya 'react' gibi anahtar kelimeler deneyin."
 
         return response
