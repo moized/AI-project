@@ -1,0 +1,17 @@
+{
+  "description": "RAG Katmanı Sorgu ve Yanıt Sözleşmesi",
+  "query_structure": {
+    "query": "string",
+    "top_k": "integer"
+  },
+  "response_structure": {
+    "chunks": [
+      {
+        "id": "string",
+        "text": "string",
+        "source": "string",
+        "score": "float"
+      }
+    ]
+  }
+}
