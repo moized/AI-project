@@ -17,8 +17,15 @@ class ResearchAgent:
             "tool_output": None
         }
 
+        query_lower = query.lower().strip()
+
+        # Selamlama kontrolü
+        if query_lower in ["merhaba", "selam", "hello", "hi", "hey"]:
+            response["answer"] = "Merhaba! Ben AI Araştırma Asistanıyım. Size teknik dokümanlar hakkında yardımcı olabilir, hesaplama yapabilir veya güncel tarihi söyleyebilirim."
+            return response
+
         # 1. Basit Araç Tetikleme Kontrolü (örn: tarih veya hesaplama)
-        if "tarih" in query.lower():
+        if "tarih" in query_lower:
             date_func = self.tools.get("get_current_date")
             if date_func:
                 res = date_func()
@@ -27,11 +34,8 @@ class ResearchAgent:
                 return response
 
         if any(op in query for op in ["+", "-", "*", "/"]):
-            # Basit matematiksel ifade algılama
             calc_func = self.tools.get("calculator")
             if calc_func:
-                # Sorgudan ifadeyi bulmaya çalışalım veya varsayılan çalıştıralım
-                # Örnek basitlik için sorgunun kendisini verelim veya filtreleyelim
                 words = query.split()
                 for word in words:
                     if any(c.isdigit() for c in word) and any(op in word for op in ["+", "-", "*", "/"]):
@@ -59,6 +63,6 @@ class ResearchAgent:
             combined_context = "\n".join(context_texts)
             response["answer"] = f"Bulunan dokümanlara göre yanıt: {combined_context[:300]}..."
         else:
-            response["answer"] = "Üzgünüm, bu konuda ilgili bir doküman bulamadım."
+            response["answer"] = f"'{query}' ile ilgili eşleşen bir doküman bulamadım. Lütfen 'architecture', 'gemini' veya 'react' gibi anahtar kelimeler deneyin."
 
         return response
