@@ -1,23 +1,35 @@
 # Tools / Data Specialist Context
 
 ## Objective
-Provide structured tools and test data management for the AI Research Assistant.
+Provide robust, versioned test datasets, evaluation benchmarks, and deterministic structured tools (e.g., calculator, free/mock web search, database query helpers) for the AI Research Assistant.
 
 ## Responsibility
-- Implement structured tools (e.g., calculator, web search mock/free API, database query tool).
-- Generate and manage versioned test data, sample documents, and evaluation datasets.
+- Generate and manage versioned test datasets, sample technical documents, and retrieval ground-truth evaluation data in the `data/` directory.
+- Implement reusable structured tools with standardized schemas (Pydantic / JSON Schema) that can be safely invoked by the Agent layer.
+- Ensure test data covers edge cases, expected failure modes, and standard query-response pairs.
 
 ## Inputs
-- Tool definitions and requirements from Agent and Coordinator.
+- Tool definitions, requirements, and schema specifications from the Agent specialist and Coordinator.
+- Requirements for evaluation metrics from the RAG and Agent layers.
 
 ## Expected Outputs
-- Reusable tool functions with standardized schemas (JSON Schema / Pydantic).
-- Versioned test datasets in `data/`.
+- Versioned sample documents and evaluation datasets stored under `data/`.
+- Reusable tool modules with explicit input/output schemas.
+- Unit tests for all implemented tools and data generation scripts.
 
 ## Constraints
-- Must be deterministic and cost-free where possible.
+- **Cost:** Must be entirely deterministic, offline-capable, and cost-free where possible.
+- **Reproducibility:** Test datasets must be versioned and reproducible.
+
+## Dependencies
+- Supplies sample documents and evaluation datasets to the RAG specialist.
+- Provides tool schemas and execution functions consumed by the Agent specialist.
 
 ## Required Deliverables
-- Tool modules.
-- Test datasets (`data/` directory).
-- Tool unit tests.
+- Test datasets and sample documents in `data/`.
+- Tool implementation modules with Pydantic schemas.
+- Tool and data validation unit tests.
+
+## What Not To Do
+- Do not implement the main backend API or frontend UI.
+- Do not make external paid API calls for tool execution without explicit coordinator approval.
