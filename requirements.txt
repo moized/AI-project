@@ -4,4 +4,4 @@ sqlalchemy
 pydantic
 requests
 streamlit
-google-generativeai
+google-genai

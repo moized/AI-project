@@ -1,6 +1,6 @@
 import os
 from typing import Dict, Any, List
-import google.generativeai as genai
+from google import genai
 from rag.rag_pipeline import SimpleRAGPipeline
 from tools.tool_implementation import TOOL_FUNCTIONS
 
@@ -9,16 +9,16 @@ class ResearchAgent:
         self.rag = SimpleRAGPipeline()
         self.tools = TOOL_FUNCTIONS
         
-        # Gemini API yapılandırması
+        # Google GenAI API yapılandırması (google-genai paketi)
         api_key = os.getenv("GEMINI_API_KEY")
         if api_key:
-            genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel('gemini-pro')
+            self.client = genai.Client(api_key=api_key)
+            self.model_name = 'gemini-2.5-flash' # veya uygun güncel model
         else:
-            self.model = None
+            self.client = None
 
     def run(self, query: str) -> Dict[str, Any]:
-        """Ajanın sorguyu işleme, araçları kullanma, RAG'den bilgi getirme ve Gemini LLM ile yanıt üretme döngüsü."""
+        """Ajanın sorguyu işleme, araçları kullanma, RAG'den bilgi getirme ve Google GenAI ile yanıt üretme döngüsü."""
         response = {
             "query": query,
             "answer": "",
@@ -68,7 +68,7 @@ class ResearchAgent:
 
         response["sources"] = sources
 
-        # 3. Gemini LLM Entegrasyonu ile Yanıt Üretimi
+        # 3. Google GenAI Entegrasyonu ile Yanıt Üretimi
         context_str = "\n\n".join(context_texts) if context_texts else "İlgili doküman bulunamadı."
         
         prompt = f"""Sen profesyonel bir AI Araştırma Asistanısın. Kullanıcının sorusunu aşağıda sağlanan doküman bağlamını kullanarak yanıtla. Eğer bağlamda yeterli bilgi yoksa, genel bilginle ancak dürüstçe yardımcı ol.
@@ -79,16 +79,19 @@ Bağlam:
 Kullanıcı Sorusu: {query}
 Yanıt:"""
 
-        if self.model:
+        if self.client:
             try:
-                gemini_response = self.model.generate_content(prompt)
+                gemini_response = self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=prompt,
+                )
                 response["answer"] = gemini_response.text
             except Exception as e:
-                response["answer"] = f"Gemini API hatası oluştu: {str(e)}. Bulunan doküman özeti: {context_str[:300]}"
+                response["answer"] = f"Google GenAI API hatası oluştu: {str(e)}. Bulunan doküman özeti: {context_str[:300]}"
         else:
             # API anahtarı yoksa fallback olarak RAG bağlamını döndür
             if context_texts:
-                response["answer"] = f"[Gemini API Anahtarı bulunamadı, RAG Özeti] {context_str[:400]}..."
+                response["answer"] = f"[GEMINI_API_KEY bulunamadı, RAG Özeti] {context_str[:400]}..."
             else:
                 response["answer"] = f"'{query}' ile ilgili eşleşen bir doküman bulamadım."
 
