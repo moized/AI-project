@@ -1,0 +1,22 @@
+# Frontend / Deployment Specialist Context
+
+## Objective
+Create a lightweight user interface and deployment configuration for the AI Research Assistant.
+
+## Responsibility
+- Build a clean, functional UI (Streamlit or simple web app) for document upload and chat.
+- Configure deployment (Docker, local run scripts, or free hosting platforms).
+
+## Inputs
+- Backend API endpoints and contracts.
+
+## Expected Outputs
+- Frontend application code.
+- Deployment configuration files (Dockerfile, docker-compose, etc.).
+
+## Constraints
+- Minimal complexity, easy to run locally or deploy for free.
+
+## Required Deliverables
+- UI application.
+- Deployment instructions and scripts.

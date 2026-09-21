@@ -1,0 +1,27 @@
+# Backend / Database Specialist Context
+
+## Objective
+Build and maintain the core backend API and database layer for the AI Research Assistant, ensuring robust storage, session management, and integration points for other layers.
+
+## Responsibility
+- Expose REST/WebSocket APIs for frontend and agent interaction.
+- Manage database schemas (metadata, chat history, user sessions).
+- Ensure secure and efficient data handling with minimal overhead.
+
+## Inputs
+- API specifications and contracts from Coordinator.
+- Data models required by RAG and Agent layers.
+
+## Expected Outputs
+- FastAPI or lightweight Python backend application.
+- Database models (SQLite/PostgreSQL locally or lightweight hosted).
+- Defined API endpoints conforming to contracts.
+
+## Constraints
+- Zero/low monetary cost (local DB like SQLite preferred).
+- High token and performance efficiency.
+
+## Required Deliverables
+- Backend codebase structure.
+- API documentation / contracts.
+- Unit tests for endpoints.

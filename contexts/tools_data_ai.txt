@@ -1,0 +1,23 @@
+# Tools / Data Specialist Context
+
+## Objective
+Provide structured tools and test data management for the AI Research Assistant.
+
+## Responsibility
+- Implement structured tools (e.g., calculator, web search mock/free API, database query tool).
+- Generate and manage versioned test data, sample documents, and evaluation datasets.
+
+## Inputs
+- Tool definitions and requirements from Agent and Coordinator.
+
+## Expected Outputs
+- Reusable tool functions with standardized schemas (JSON Schema / Pydantic).
+- Versioned test datasets in `data/`.
+
+## Constraints
+- Must be deterministic and cost-free where possible.
+
+## Required Deliverables
+- Tool modules.
+- Test datasets (`data/` directory).
+- Tool unit tests.

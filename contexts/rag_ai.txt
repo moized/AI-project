@@ -1,0 +1,27 @@
+# Document Processing / RAG Specialist Context
+
+## Objective
+Implement document ingestion, chunking, embedding, indexing, and retrieval mechanisms for technical documents.
+
+## Responsibility
+- Parse and chunk various document formats (PDF, Markdown, TXT).
+- Generate embeddings (using free/local or cost-effective APIs).
+- Store and query vectors (using local vector stores like Chroma, FAISS, or DuckDB).
+- Provide a clean retrieval interface for the Agent/Backend.
+
+## Inputs
+- Raw technical documents from test data or user uploads.
+- Query strings from Agent/Backend.
+
+## Expected Outputs
+- RAG pipeline scripts/modules.
+- Retrieval function conforming to the RAG contract.
+
+## Constraints
+- Zero/low cost (local vector stores, efficient chunking).
+- Low latency retrieval.
+
+## Required Deliverables
+- Ingestion pipeline.
+- Retrieval function module.
+- Retrieval test suite and ground-truth evaluation hooks.

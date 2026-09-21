@@ -1,0 +1,26 @@
+# Agent Specialist Context
+
+## Objective
+Implement the core agent loop that coordinates reasoning, tool usage, and RAG retrieval to answer user queries grounded in documents.
+
+## Responsibility
+- Implement agent logic (ReAct or similar lightweight pattern) using Gemini free tier.
+- Decide when to use RAG vs. structured tools vs. direct generation.
+- Ensure proper citation and grounding in retrieved sources.
+
+## Inputs
+- User prompts from Backend.
+- Retrieval interface from RAG specialist.
+- Tool schemas from Tools/Data specialist.
+
+## Expected Outputs
+- Agent execution loop and prompt templates.
+- Grounded response with citations.
+
+## Constraints
+- Strict token efficiency (avoid runaway loops).
+- Utilize Gemini free tier effectively.
+
+## Required Deliverables
+- Agent module.
+- Agent evaluation test cases.
