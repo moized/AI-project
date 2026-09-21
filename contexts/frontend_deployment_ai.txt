@@ -1,22 +1,42 @@
 # Frontend / Deployment Specialist Context
 
 ## Objective
-Create a lightweight user interface and deployment configuration for the AI Research Assistant.
+AI Araştırma Asistanı için hafif, kullanıcı dostu bir ön uç (frontend) arayüzü geliştirmek ve projenin tamamının (Backend + Frontend) kolayca dağıtılması (deployment) için Docker container yapılandırmalarını hazırlamak.
 
 ## Responsibility
-- Build a clean, functional UI (Streamlit or simple web app) for document upload and chat.
-- Configure deployment (Docker, local run scripts, or free hosting platforms).
+1. Backend API'leri (`/health`, `/chat`) ile iletişim kurabilen Streamlit veya basit bir web arayüzü (`frontend/app.py`) tasarlamak ve geliştirmek.
+2. Kullanıcının soru sorabilmesini, gelen yanıtları, kaynak atıflarını (citations) ve araç çıktılarını (tool outputs) net bir şekilde görebilmesini sağlamak.
+3. Projenin yerel makinelerde veya bulut ortamlarında sorunsuz çalışabilmesi için `Dockerfile` ve `docker-compose.yml` yapılandırmalarını oluşturmak.
+4. Hem backend hem frontend servislerinin birlikte çalışıp çalışmadığını doğrulamak için duman testleri (smoke tests) ve çalıştırma komutlarını tanımlamak.
 
 ## Inputs
-- Backend API endpoints and contracts.
+- Tamamlanmış Backend API uç noktaları (`backend/main.py`) ve sözleşmeleri (`contracts/backend_api_contract.md`).
+- Proje genelindeki sıfır/yakın maliyet ve token verimliliği kısıtları.
 
 ## Expected Outputs
-- Frontend application code.
-- Deployment configuration files (Dockerfile, docker-compose, etc.).
+- `frontend/app.py` (Streamlit veya benzeri hafif arayüz).
+- `Dockerfile` ve `docker-compose.yml`.
+- Dağıtım ve çalıştırma yönergeleri.
 
 ## Constraints
-- Minimal complexity, easy to run locally or deploy for free.
+- **Maliyet:** Ücretsiz barındırma platformlarına ve yerel çalıştırmaya uygun olmalıdır.
+- **Basitlik:** Karmaşık ön uç framework'leri yerine hızlı ve işlevsel yapılar (örn. Streamlit) tercih edilmelidir.
+
+## Dependencies
+- Tamamlanmış ve çalışan Backend / Database katmanına bağımlıdır.
+
+## Relevant Technologies
+- Python
+- Streamlit / Requests
+- Docker & Docker Compose
 
 ## Required Deliverables
-- UI application.
-- Deployment instructions and scripts.
+1. Ön uç arayüz uygulaması (`frontend/`).
+2. Kapsayıcı (Container) yapılandırma dosyaları.
+3. Birlikte çalıştırma ve duman testi komutları.
+
+## What Not To Do
+- Backend iş mantığını, RAG chunking veya agent döngüsünü doğrudan ön uç kodunda yeniden implemente etmeyin; her zaman Backend API'yi kullanın.
+
+## Testing Requirements
+- Ön ucun backend ile başarılı bir şekilde haberleşebildiğini ve `/chat` uç noktasından gelen yanıtları ekranda doğru gösterebildiğini doğrulayan duman testleri/senaryoları sağlayın.
