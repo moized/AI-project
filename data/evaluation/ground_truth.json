@@ -1,0 +1,20 @@
+[
+  {
+    "query_id": "q_001",
+    "question": "What are the core components of a RAG architecture?",
+    "expected_sources": "rag_architecture.md",
+    "ground_truth_answer": "The core components of RAG architecture are Document Ingestion & Chunking, Embeddings, Vector Database, Retrieval, and Generation."
+  },
+  {
+    "query_id": "q_002",
+    "question": "What are some best practices for using the Gemini API free tier?",
+    "expected_sources": "gemini_api_guide.txt",
+    "ground_truth_answer": "Best practices include keeping system prompts concise, using local caching or concise RAG contexts to minimize payload size, and implementing proper error handling for rate limits."
+  },
+  {
+    "query_id": "q_003",
+    "question": "How does the ReAct agent pattern work?",
+    "expected_sources": "agent_react_pattern.md",
+    "ground_truth_answer": "The ReAct pattern interleaves reasoning traces (Thought) and task-specific actions (Action) in a loop consisting of Thought, Action, and Observation until enough information is gathered."
+  }
+]

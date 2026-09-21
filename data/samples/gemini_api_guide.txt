@@ -1,0 +1,14 @@
+Gemini API Guide and Free Tier Limitations
+
+1. Overview
+The Gemini API provides access to Google's state-of-the-art multimodal models. 
+
+2. Free Tier Limits
+- Rate limits apply (e.g., requests per minute and tokens per minute restrictions).
+- The free tier is ideal for development, testing, and small-scale applications.
+- Users must ensure efficient token usage to avoid hitting quota limits.
+
+3. Best Practices
+- Keep system prompts concise.
+- Use local caching or concise RAG contexts to minimize payload size.
+- Implement proper error handling for rate-limit responses (HTTP 429).
