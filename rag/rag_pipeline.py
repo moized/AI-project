@@ -14,7 +14,7 @@ class SimpleRAGPipeline:
     def __init__(self, samples_dir: str = "data/samples", collection_name: str = "research_docs", vector_size: int = 768):
         self.samples_dir = samples_dir
         self.collection_name = collection_name
-        self.vector_size = vector_size # gemini-embedding-2 MRL destekli boyut (önerilen: 768, 1536 veya 3072)
+        self.vector_size = vector_size  # gemini-embedding-2 için önerilen boyut: 768, 1536 veya 3072
         
         # Qdrant yerel kalıcı vektör veritabanı (disk persistence)
         self.qdrant_client = QdrantClient(path="./qdrant_storage")
@@ -31,7 +31,6 @@ class SimpleRAGPipeline:
             self.genai_client = None
 
         self._ensure_collection()
-        self._index_documents()
 
     def _ensure_collection(self):
         try:
@@ -44,6 +43,7 @@ class SimpleRAGPipeline:
                 )
         except Exception as e:
             logger.error(f"Koleksiyon oluşturulurken hata: {e}")
+            raise
 
     def _get_embedding(self, text: str, task_prefix: str = "task: search result | query: ") -> List[float]:
         if not text or not text.strip():
@@ -51,7 +51,6 @@ class SimpleRAGPipeline:
 
         if self.genai_client:
             try:
-                # Resmi belgelere göre gemini-embedding-2 modeli ve output_dimensionality kullanımı
                 formatted_text = f"{task_prefix}{text}" if not text.startswith("task:") else text
                 response = self.genai_client.models.embed_content(
                     model="gemini-embedding-2",
@@ -61,14 +60,15 @@ class SimpleRAGPipeline:
                 if response and response.embeddings:
                     return response.embeddings[0].values
             except Exception as e:
-                logger.warning(f"Gemini Embedding API hatası, sıfır vektör döndürülüyor: {e}")
+                logger.error(f"Gemini Embedding API hatası: {e}")
+                raise
 
-        # Fallback olarak sıfır vektör veya dummy
-        return [0.0] * self.vector_size
+        raise RuntimeError("GEMINI_API_KEY tanımlı değil veya GenAI istemcisi kullanılamıyor.")
 
     def _load_and_chunk_documents(self) -> List[Dict[str, Any]]:
         chunks = []
         if not os.path.exists(self.samples_dir):
+            logger.warning(f"Samples dizini bulunamadı: {self.samples_dir}")
             return chunks
         
         patterns = [
@@ -82,7 +82,6 @@ class SimpleRAGPipeline:
             for filepath in glob.glob(pattern):
                 try:
                     filename = os.path.basename(filepath)
-                    content = ""
                     if filepath.endswith(".pdf"):
                         reader = PdfReader(filepath)
                         for page_num, page in enumerate(reader.pages):
@@ -115,48 +114,45 @@ class SimpleRAGPipeline:
                                 chunk_id_counter += 1
                 except Exception as e:
                     logger.error(f"Dosya okunurken hata ({filepath}): {e}")
+                    raise
         return chunks
 
-    def _index_documents(self):
+    def index_documents(self):
+        """Dokümanları yükler, parçalar ve Qdrant üzerinde indeksler."""
         try:
             chunks = self._load_and_chunk_documents()
             if not chunks:
                 return
 
-            # Mevcut indekslenmiş nokta sayısını kontrol et
-            count_result = self.qdrant_client.count(collection_name=self.collection_name, exact=True)
-            
-            # Eğer doküman sayısı değiştiyse veya veritabanı boşsa yeniden indeksle (gereksiz tekrarı önleme)
-            if count_result.count != len(chunks):
-                points = []
-                for idx, chunk in enumerate(chunks):
-                    # Resmi belgelere uygun olarak dokümanlar için document yapısı
-                    doc_prefix = f"title: {chunk['source']} | text: "
-                    vector = self._get_embedding(chunk["text"], task_prefix=doc_prefix)
-                    
-                    points.append(
-                        PointStruct(
-                            id=idx,
-                            vector=vector,
-                            payload={
-                                "chunk_id": chunk["id"],
-                                "text": chunk["text"],
-                                "source": chunk["source"],
-                                "page": chunk.get("page", 1)
-                            }
-                        )
+            points = []
+            for idx, chunk in enumerate(chunks):
+                doc_prefix = f"title: {chunk['source']} | text: "
+                vector = self._get_embedding(chunk["text"], task_prefix=doc_prefix)
+                
+                points.append(
+                    PointStruct(
+                        id=idx,
+                        vector=vector,
+                        payload={
+                            "chunk_id": chunk["id"],
+                            "text": chunk["text"],
+                            "source": chunk["source"],
+                            "page": chunk.get("page", 1)
+                        }
                     )
-                if points:
-                    self.qdrant_client.recreate_collection(
-                        collection_name=self.collection_name,
-                        vectors_config=VectorParams(size=self.vector_size, distance=Distance.COSINE)
-                    )
-                    self.qdrant_client.upsert(
-                        collection_name=self.collection_name,
-                        points=points
-                    )
+                )
+            if points:
+                self.qdrant_client.recreate_collection(
+                    collection_name=self.collection_name,
+                    vectors_config=VectorParams(size=self.vector_size, distance=Distance.COSINE)
+                )
+                self.qdrant_client.upsert(
+                    collection_name=self.collection_name,
+                    points=points
+                )
         except Exception as e:
             logger.error(f"İndeksleme sırasında hata: {e}")
+            raise
 
     def retrieve(self, query: str, top_k: int = 3) -> List[Dict[str, Any]]:
         """Qdrant vektör veritabanı üzerinden anlamsal (semantic) arama yapar."""
@@ -164,7 +160,11 @@ class SimpleRAGPipeline:
             return []
 
         try:
-            self._index_documents()
+            # Koleksiyon boşsa otomatik indeksle
+            count_result = self.qdrant_client.count(collection_name=self.collection_name, exact=True)
+            if count_result.count == 0:
+                self.index_documents()
+
             query_vector = self._get_embedding(query, task_prefix="task: search result | query: ")
 
             search_result = self.qdrant_client.query_points(
@@ -175,8 +175,8 @@ class SimpleRAGPipeline:
 
             results = []
             for hit in search_result:
-                if hit.score > 0.01:
-                    payload = hit.payload
+                if hit.score > 0.0:
+                    payload = hit.payload or {}
                     results.append({
                         "id": payload.get("chunk_id"),
                         "text": payload.get("text"),
@@ -187,6 +187,6 @@ class SimpleRAGPipeline:
             return results
         except Exception as e:
             logger.error(f"Retrieval sırasında hata: {e}")
-            return []
+            raise
 
 rag_pipeline = SimpleRAGPipeline()
