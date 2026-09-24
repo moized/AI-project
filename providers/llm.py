@@ -2,11 +2,16 @@ from __future__ import annotations
 
 import json
 import logging
+import re
+import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from datetime import datetime, time as datetime_time, timedelta, timezone
 from typing import Any, Protocol
+from zoneinfo import ZoneInfo
 
 from google import genai
+from google.genai import types
 
 from core.config import settings
 
@@ -140,7 +145,7 @@ class GeminiLLMProvider:
         patterns = (
             r"retry\s+in\s+(\d+(?:\.\d+)?)\s*s",
             r"retry[-_ ]after\s*[:=]?\s*(\d+(?:\.\d+)?)\s*s?",
-            r'"retrydelay"\s*:\s*"?(\\d+(?:\.\d+)?)s"?',
+            r'"retrydelay"\s*:\s*"?(\d+(?:\.\d+)?)s"?',
         )
 
         for pattern in patterns:
