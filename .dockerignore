@@ -1,0 +1,11 @@
+.git
+.gitignore
+.venv
+__pycache__
+.pytest_cache
+.ruff_cache
+.env
+qdrant_storage
+runtime
+data/samples
+*.db
