@@ -23,6 +23,20 @@ def _env_float(name: str, default: float, minimum: float | None = None) -> float
     return value
 
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+
+    raise ValueError(f"{name} must be a boolean")
+
+
 @dataclass(frozen=True)
 class Settings:
     gemini_api_key: str | None
@@ -49,6 +63,8 @@ class Settings:
     rag_max_context_chars: int
 
     database_url: str
+    index_on_startup: bool
+    backend_access_token: str | None
     max_upload_mb: int
     max_tool_rounds: int
     log_level: str
