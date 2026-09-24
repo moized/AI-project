@@ -5,7 +5,7 @@ services:
     plan: free
     branch: production-hardening-2026
     autoDeploy: true
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements-backend.txt
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /ready
     envVars:
