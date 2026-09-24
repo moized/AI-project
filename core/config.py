@@ -29,6 +29,8 @@ class Settings:
     gemini_model: str
     gemini_embedding_model: str
     gemini_embedding_dimension: int
+    local_embedding_model: str
+    local_embedding_dimension: int
 
     llm_provider: str
     embedding_provider: str
@@ -71,7 +73,7 @@ class Settings:
                 128,
             ),
             llm_provider=os.getenv("LLM_PROVIDER", "gemini").lower(),
-            embedding_provider=os.getenv("EMBEDDING_PROVIDER", "gemini").lower(),
+            embedding_provider=os.getenv("EMBEDDING_PROVIDER", "local").lower(),
             rag_samples_dir=Path(os.getenv("RAG_SAMPLES_DIR", "data/samples")),
             qdrant_path=Path(os.getenv("QDRANT_PATH", "qdrant_storage")),
             rag_collection_name=os.getenv(
@@ -94,6 +96,12 @@ class Settings:
                 "RAG_EMBEDDING_RETRY_SECONDS",
                 2.0,
                 0.1,
+            ),
+            local_embedding_model=os.getenv(
+                "LOCAL_EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5"
+            ),
+            local_embedding_dimension=_env_int(
+                "LOCAL_EMBEDDING_DIMENSION", 384, 128
             ),
             rag_min_retrieval_score=_env_float(
                 "RAG_MIN_RETRIEVAL_SCORE",
