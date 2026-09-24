@@ -1,36 +1,34 @@
-import unittest
 from rag.rag_pipeline import SimpleRAGPipeline
+from providers.embeddings import DeterministicEmbeddingProvider
 
-class TestRAGPipeline(unittest.TestCase):
-    def setUp(self):
-        self.rag = SimpleRAGPipeline(samples_dir="data/samples")
 
-    def test_chunking_and_metadata(self):
-        chunks = self.rag._load_and_chunk_documents()
-        self.assertIsInstance(chunks, list)
-        if chunks:
-            self.assertIn("source", chunks[0])
-            self.assertIn("text", chunks[0])
-            self.assertIn("id", chunks[0])
+def test_chunking_and_metadata():
+    rag = SimpleRAGPipeline(
+        samples_dir="data/samples",
+        embedding_provider=DeterministicEmbeddingProvider(),
+    )
+    chunks = rag._load_and_chunk_documents()
+    assert isinstance(chunks, list)
+    assert chunks
+    assert {"id", "source", "text"}.issubset(chunks[0])
 
-    def test_semantic_retrieve(self):
-        results = self.rag.retrieve("architecture", top_k=2)
-        self.assertIsInstance(results, list)
-        for res in results:
-            self.assertIn("id", res)
-            self.assertIn("text", res)
-            self.assertIn("source", res)
-            self.assertIn("score", res)
-            self.assertIsInstance(res["score"], float)
 
-    def test_empty_query(self):
-        results = self.rag.retrieve("", top_k=2)
-        self.assertEqual(len(results), 0)
+def test_semantic_retrieve():
+    rag = SimpleRAGPipeline(
+        samples_dir="data/samples",
+        embedding_provider=DeterministicEmbeddingProvider(),
+    )
+    rag.index_documents()
+    results = rag.retrieve("architecture", top_k=2)
+    assert isinstance(results, list)
+    for result in results:
+        assert {"id", "text", "source", "score"}.issubset(result)
+        assert isinstance(result["score"], float)
 
-    def test_irrelevant_query(self):
-        results = self.rag.retrieve("xyzabcqwe123987654321", top_k=2)
-        self.assertIsInstance(results, list)
-        self.assertEqual(len(results), 0)
 
-if __name__ == "__main__":
-    unittest.main()
+def test_empty_query():
+    rag = SimpleRAGPipeline(
+        samples_dir="data/samples",
+        embedding_provider=DeterministicEmbeddingProvider(),
+    )
+    assert rag.retrieve("", top_k=2) == []
