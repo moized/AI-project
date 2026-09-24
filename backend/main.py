@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import logging
+import secrets
 import tempfile
 from contextlib import asynccontextmanager
 from functools import lru_cache
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
+from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from agent.agent_core import ResearchAgent
@@ -32,6 +33,15 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     init_db()
+
+    if settings.index_on_startup:
+        logger.info("INDEX_ON_STARTUP enabled; indexing bundled documents.")
+        result = get_rag().index_documents()
+        if result["failed"]:
+            raise RuntimeError(
+                f"Startup indexing failed for {result['failed']} document(s)."
+            )
+
     yield
 
 
@@ -49,6 +59,23 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def require_backend_token(
+    x_backend_token: str | None = Header(default=None),
+) -> None:
+    configured = settings.backend_access_token
+    if not configured:
+        return
+
+    if not x_backend_token or not secrets.compare_digest(
+        x_backend_token,
+        configured,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required.",
+        )
 
 
 @lru_cache(maxsize=1)
@@ -85,7 +112,9 @@ def readiness_check() -> HealthResponse:
     response_model=DocumentListResponse,
     tags=["documents"],
 )
-def list_documents() -> DocumentListResponse:
+def list_documents(
+    _auth: None = Depends(require_backend_token),  # noqa: B008
+) -> DocumentListResponse:
     directory = settings.rag_samples_dir
     directory.mkdir(parents=True, exist_ok=True)
 
@@ -105,6 +134,7 @@ def list_documents() -> DocumentListResponse:
 )
 async def upload_document(
     file: UploadFile = File(...),  # noqa: B008
+    _auth: None = Depends(require_backend_token),  # noqa: B008
 ) -> UploadResponse:
     filename = Path(file.filename or "").name
     if not filename:
@@ -177,6 +207,7 @@ async def upload_document(
 )
 def index_documents(
     rag: SimpleRAGPipeline = Depends(get_rag),  # noqa: B008
+    _auth: None = Depends(require_backend_token),  # noqa: B008
 ) -> IndexResponse:
     try:
         result = rag.index_documents()
@@ -203,6 +234,7 @@ def chat_endpoint(
     request: QueryRequest,
     db: Session = Depends(get_db),  # noqa: B008
     agent: ResearchAgent = Depends(get_agent),  # noqa: B008
+    _auth: None = Depends(require_backend_token),  # noqa: B008
 ) -> QueryResponse:
     try:
         result = agent.run(request.query)
