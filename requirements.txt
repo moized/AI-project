@@ -1,5 +1,5 @@
 fastapi
-uvicorn
+uvicorn[standard]
 sqlalchemy
 pydantic
 requests
@@ -8,3 +8,5 @@ google-genai
 pypdf
 qdrant-client
 python-dotenv
+pytest
+httpx
