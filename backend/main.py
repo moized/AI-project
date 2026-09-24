@@ -70,13 +70,11 @@ def health_check() -> HealthResponse:
 
 @app.get("/ready", response_model=HealthResponse, tags=["system"])
 def readiness_check() -> HealthResponse:
-    """Readiness probe for the database and local vector store."""
+    """Readiness probe for the database and the application's Qdrant client."""
     try:
         init_db()
-        settings.qdrant_path.mkdir(parents=True, exist_ok=True)
-        qdrant = QdrantClient(path=str(settings.qdrant_path))
-        qdrant.get_collections()
-        qdrant.close()
+        rag = get_rag()
+        rag.qdrant.get_collections()
         return HealthResponse(status="ok")
     except Exception as exc:
         logger.exception("Readiness check failed.")
