@@ -15,7 +15,11 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
 from core.config import settings
-from providers.embeddings import EmbeddingProvider, GeminiEmbeddingProvider
+from providers.embeddings import (
+    EmbeddingProvider,
+    GeminiEmbeddingProvider,
+    LocalSentenceTransformerEmbeddingProvider,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +59,16 @@ class SimpleRAGPipeline:
         self.chunk_overlap = settings.rag_chunk_overlap
         self.embedding_model = settings.gemini_embedding_model
         self.embedding_dimension = settings.gemini_embedding_dimension
-        self.embedding_provider = embedding_provider or GeminiEmbeddingProvider()
+        if embedding_provider is not None:
+            self.embedding_provider = embedding_provider
+        elif settings.embedding_provider == "local":
+            self.embedding_provider = LocalSentenceTransformerEmbeddingProvider()
+        elif settings.embedding_provider == "gemini":
+            self.embedding_provider = GeminiEmbeddingProvider()
+        else:
+            raise ValueError(
+                f"Unsupported EMBEDDING_PROVIDER: {settings.embedding_provider}"
+            )
 
         self.samples_dir.mkdir(parents=True, exist_ok=True)
         self.qdrant_path.mkdir(parents=True, exist_ok=True)
