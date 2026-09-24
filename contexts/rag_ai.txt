@@ -1,48 +1,42 @@
-# Document Processing / RAG Specialist Context
+# RAG Specialist Context — Current Stage
 
 ## Objective
-Implement a robust, cost-effective, and production-ready document ingestion, chunking, embedding, indexing, and retrieval pipeline for technical documents in the AI Research Assistant.
+Maintain a production-oriented, low-cost document ingestion and retrieval component.
 
-## Responsibility
-- Parse and chunk various document formats (PDF, Markdown, TXT) efficiently, leveraging sample documents provided by the Tools & Data layer (`data/samples/`).
-- Generate embeddings using local/free models (e.g., Sentence Transformers) or cost-effective APIs to maintain zero/near-zero cost.
-- Store and query vectors using lightweight, local vector databases (e.g., Chroma, FAISS, or DuckDB).
-- Expose a clean, well-defined retrieval function/interface conforming to `contracts/rag_contract.json` for the Agent and Backend layers.
-- Maintain retrieval accuracy, low latency, and deterministic chunking strategies.
+## Owns
+- `rag/rag_pipeline.py`
+- `contracts/rag_contract.json`
+- retrieval/indexing tests
 
-## Inputs
-- Sample technical documents and evaluation datasets from the Tools & Data layer (`data/samples/`).
-- Query strings and retrieval parameters from the Agent/Backend layers.
+## Current architecture
+`document -> PDF/text extraction -> deterministic chunking -> replaceable embedding provider -> local persistent Qdrant -> score-filtered retrieval`
 
-## Expected Outputs
-- RAG pipeline scripts and modules for ingestion, embedding, and storage.
-- `contracts/rag_contract.json` defining the query format, retrieved chunks, and citation structure.
-- Evaluation hooks to measure retrieval relevance (e.g., hit rate, MRR) aligned with evaluation datasets.
+## Current provider
+The default provider is `LocalFastEmbedProvider` using:
+`sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`
+at 384 dimensions.
 
-## Constraints
-- **Cost:** Zero or near-zero monetary cost (prefer local vector stores and local/free embedding models).
-- **Token Efficiency:** Keep retrieved context concise to avoid overflowing agent token limits.
-- **Performance:** Low latency retrieval suitable for real-time chat interactions.
+Gemini Embedding 2 remains an optional provider. It must not be required for normal low-cost development.
 
-## Dependencies
-- Relies on test data and sample documents provided by the Tools & Data layer (`data/samples/`).
-- Provides retrieval output consumed directly by the Agent layer and exposed via the Backend API.
+## Contract
+`retrieve(query, top_k) -> [{id, text, source, page, score}]`
 
-## Relevant Technologies
-- Python
-- Sentence Transformers / Local Embeddings
-- Lightweight Vector Store (Chroma / FAISS / DuckDB)
-- JSON / Contracts
+`index_documents() -> {indexed, unchanged, failed, chunks}`
 
-## Required Deliverables
-1. `contracts/rag_contract.json` (RAG sözleşmesi).
-2. Document ingestion and chunking module.
-3. Vector store indexing script and retrieval interface module.
-4. Unit tests and retrieval evaluation suite.
+## Important guarantees
+- Empty queries return [].
+- Provider returns exactly one vector per input.
+- Qdrant dimension must match the active provider.
+- Retrieval filters scores below `RAG_MIN_RETRIEVAL_SCORE`.
+- Incremental indexing uses a manifest.
+- New vectors are written before stale vectors are removed.
+- Runtime vector/database state is not committed to Git.
 
-## What Not To Do
-- Do not implement the Agent logic, tool execution, or user interface.
-- Do not make external paid API calls for embeddings without explicit coordinator approval.
+## Do not
+- implement agent logic
+- implement FastAPI routes
+- execute paid API calls by default
+- silently rebuild or delete a vector collection on dimension mismatch
 
-## Testing Requirements
-- Verify that chunking preserves semantic meaning and retrieval correctly fetches relevant sample documents based on test queries.
+## Tests
+Use the deterministic embedding provider for offline tests. Do not require a network model download in CI tests.
