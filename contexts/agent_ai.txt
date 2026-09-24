@@ -1,50 +1,46 @@
-# Agent Specialist Context
+# Agent Specialist Context — Current Stage
 
 ## Objective
-Implement the core agent loop that coordinates reasoning, tool usage, and RAG retrieval to answer user queries grounded in documents, utilizing the Gemini free tier efficiently.
+Build a controlled research agent that combines RAG evidence, Gemini generation and allow-listed tools.
 
-## Responsibility
-1. Implement the agent reasoning loop (e.g., ReAct pattern or structured function calling) using Gemini.
-2. Integrate the existing Tools & Data layer (`contracts/tools_contract.json` ve `tools/tool_implementation.py`) so the agent can execute structured tools (calculator, date, etc.).
-3. Integrate the RAG pipeline (`contracts/rag_contract.json` ve `rag/rag_pipeline.py`) to retrieve relevant technical document chunks and provide source citations.
-4. Define system prompts, state management, and short-term conversation memory requirements.
-5. Ensure token efficiency and robust error handling during execution.
+## Current architecture
+`Backend -> ResearchAgent -> RAG context + Gemini Interactions API -> controlled tools -> final answer`
 
-## Inputs
-- User prompts from the Backend layer.
-- Retrieval interface from the RAG pipeline.
-- Tool schemas and execution functions from the Tools & Data layer.
+## LLM interface
+The application uses `google-genai` and Gemini Interactions API.
 
-## Expected Outputs
-- Agent execution module and prompt templates.
-- Grounded responses with source citations.
-- Unit and integration tests for agent execution and tool/RAG dispatch.
+Tool execution is application-controlled:
+1. model returns `function_call`
+2. Python allow-list executes the function
+3. application sends `function_result`
+4. interaction continues through `previous_interaction_id`
 
-## Constraints
-- **Cost & API:** Must use Gemini free tier appropriately.
-- **Token Efficiency:** Avoid runaway agent loops and minimize redundant context windows.
-- **Production-Ready:** Modular, testable, and robust against invalid tool calls or empty retrieval results.
+Tool rounds are bounded by `MAX_TOOL_ROUNDS`.
 
-## Dependencies
-- Relies on completed Tools & Data layer (`tools/tool_implementation.py`, `contracts/tools_contract.json`).
-- Relies on completed RAG layer (`rag/rag_pipeline.py`, `contracts/rag_contract.json`).
-- Provides final grounded responses to the Backend layer.
+## Current tools
+- calculator
+- get_current_date
 
-## Relevant Technologies
-- Python
-- Google Gemini API (Free tier)
-- JSON / Contracts
+The calculator must never use `eval()` or execute arbitrary Python.
 
-## Required Deliverables
-1. Agent orchestration and reasoning loop module.
-2. System prompts and citation formatting logic.
-3. Unit and integration tests validating agent behavior with tools and RAG.
+## RAG contract
+Treat RAG as a black box:
+`retrieve(query, top_k) -> structured sources/chunks`
 
-## What Not To Do
-- Do not modify internal RAG chunking or database implementation details (treat RAG as a black box via its contract).
-- Do not modify tool definitions without coordinating with the Tools & Data layer.
-- Do not implement FastAPI endpoints or frontend views.
+## Output
+Return:
+- query
+- answer
+- sources
+- tool_calls
 
-## Testing Requirements
-- Verify that the agent correctly decides when to use tools vs. RAG vs. direct generation.
-- Test multi-step reasoning and ensure citations are correctly attached to final answers.
+## Token/cost rules
+- Prefer local embeddings.
+- Keep retrieval context bounded by `RAG_MAX_CONTEXT_CHARS`.
+- Do not resend an entire interaction history when server-side interaction state can be used.
+- Do not introduce autonomous multi-agent loops without a concrete requirement.
+
+## Do not
+- implement FastAPI endpoints
+- change RAG internals without updating its contract
+- execute model-requested code outside the allow-list
