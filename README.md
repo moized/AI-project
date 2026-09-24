@@ -20,13 +20,13 @@ A modular-monolith research assistant for technical documents, with local vector
 
 The system is intentionally designed for low or near-zero cost:
 
-- Gemini 3.6 Flash is used for generation.
-- The default embedding provider is local intfloat/multilingual-e5-small, so document indexing does not consume Gemini embedding quota.
+- Gemini 3.5 Flash-Lite is the default generation model, with model failover configured for Gemini 3.1 Flash-Lite and Gemini 3.8 Flash.
+- The default embedding provider is local FastEmbed with `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`, so document indexing does not consume Gemini embedding quota.
 - Qdrant runs locally.
 - SQLite runs locally.
 - Docker and GitHub Actions are used for reproducible development and CI.
 
-Gemini 3.6 Flash is a stable model and has a free tier in the Gemini Developer API at the current project configuration. Gemini Embedding 2 is supported as an optional provider, and Google recommends task instructions in the input text rather than the old task_type parameter for Embedding 2.
+Gemini generation is configurable through `GEMINI_MODEL` and `GEMINI_FALLBACK_MODELS`. The provider treats daily quota exhaustion as model-specific failover, while transient 429/5xx errors use bounded exponential retry delays of 2, 4, 8, 16, and 32 seconds; server-provided retry guidance takes precedence. Gemini Embedding 2 remains an optional provider.
 
 ## Local setup
 
