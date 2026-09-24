@@ -1,49 +1,50 @@
-# AI Research Assistant - Proje Uygulama Planı
+# AI Research Assistant — Current Implementation Plan
 
-Bu doküman, AI Research Assistant projesinin uzmanlar (specialist) bazında hangi sırayla geliştirileceğini, katmanlar arası bağımlılıkları ve sözleşme gereksinimlerini belirler.
+## Principle
+Do Pass 2 first: make the system work and harden it; then perform Pass 1 as a learning/explanation pass over the finished architecture.
 
-## 1. Uzman Geliştirme Sırası
+## Current target
+A low-cost production-oriented modular monolith:
 
-Proje, temel veri ve araçlardan başlayarak sırasıyla şu sırada geliştirilecektir:
+`Streamlit -> FastAPI -> ResearchAgent -> RAG / Tools -> Gemini`
 
-1. **Tools & Data Specialist (Araç ve Veri Uzmanı)**
-   - *Durum:* İlk örnek veriler (`data/samples/`) ve ground-truth veri seti oluşturuldu.
-   - *Sonraki Adım:* Ajan tarafından kullanılacak yapılandırılmış araçların (hesap makinesi, arama vb.) şemaları ve fonksiyonları.
-2. **Document Processing / RAG Specialist (Doküman İşleme ve RAG Uzmanı)**
-   - *Bağımlılık:* Tools & Data tarafından sağlanan örnek dokümanlar (`data/samples/`).
-   - *Görev:* Doküman parçalama (chunking), embedding üretimi ve vektör veritabanı indeksleme.
-3. **Agent Specialist (Ajan Uzmanı)**
-   - *Bağımlılık:* RAG retrieval arayüzü ve Tools/Data araç şemaları.
-   - *Görev:* ReAct döngüsü, Gemini entegrasyonu ve kaynak atıflı (citation) yanıt üretimi.
-4. **Backend / Database Specialist (Arka Uç ve Veritabanı Uzmanı)**
-   - *Bağımlılık:* Agent ve RAG katmanlarının çalışır arayüzleri.
-   - *Görev:* FastAPI endpoint'leri, oturum yönetimi ve veritabanı kalıcılığı (SQLite).
-5. **Frontend / Deployment Specialist (Ön Uç ve Dağıtım Uzmanı)**
-   - *Bağımlılık:* Backend API sözleşmeleri (`contracts/`).
-   - *Görev:* Streamlit veya hafif web arayüzü ve Docker/dağıtım yapılandırması.
+Qdrant and SQLite remain local runtime components.
 
----
+## Provider policy
+- LLM: Gemini 3.8 Flash through `google-genai`
+- Embeddings: FastEmbed local by default
+- Gemini Embedding 2: optional provider
+- Test doubles: deterministic embeddings + fake LLM
 
-## 2. Katmanlar Arası Bağımlılıklar ve Ön Gereksinimler
+## Work order
+1. Infrastructure/configuration/contracts
+2. Tools and deterministic data
+3. RAG ingestion/retrieval
+4. Agent + function calling
+5. Backend/database/API
+6. Frontend/deployment
+7. Integration/evaluation/observability
 
-- **Ön Koşul (Başlangıç):** `data/` altındaki ham dokümanlar ve test veri seti.
-- **RAG Başlangıç Şartı:** `data/samples/` altındaki Markdown ve TXT dosyalarının hazır olması.
-- **Agent Başlangıç Şartı:** RAG getirme fonksiyonunun (`retrieval`) ve araçların giriş/çıkış şemalarının netleşmesi.
-- **Backend Başlangıç Şartı:** Agent ve RAG modüllerinin Python fonksiyonları olarak çağrılabilir olması.
-- **Frontend Başlangıç Şartı:** Backend REST/WebSocket API'lerinin tamamlanmış olması.
+## Production checks
+- explicit contracts
+- typed inputs/outputs
+- safe tool allow-list
+- bounded tool loops
+- bounded context
+- incremental indexing
+- runtime-state isolation
+- API versioning
+- safe error responses
+- automated lint/compile/test CI
+- Docker reproducibility
 
----
+## Current known next engineering layers
+- retrieval evaluation (Hit@K/MRR)
+- reranking/hybrid retrieval if evaluation justifies it
+- structured logging/request IDs
+- readiness endpoint
+- authentication/rate limiting when exposed beyond local use
+- background indexing if ingestion becomes slow
 
-## 3. Gerekli Sözleşmeler (`contracts/`)
-
-Her katman bir sonraki katmana geçilmeden önce şu sözleşmeleri sağlamalıdır:
-- `contracts/rag_contract.json` (veya `.py`): RAG modülünün kabul ettiği sorgu formatı ve döndürdüğü chunk/citation yapısı.
-- `contracts/tools_contract.json`: Araçların Pydantic / JSON şemaları.
-- `contracts/backend_api_contract.md`: Frontend'in tüketeceği API endpoint tanımları.
-
----
-
-## 4. Bağımsız Geliştirilebilir Alanlar
-
-- **Tools & Data** ve **RAG** katmanlarının ilk hazırlıkları (veri setleri ve indeksleme) diğer katmanlardan bağımsız olarak test edilebilir.
-- **Frontend** tasarımı, Backend API sözleşmeleri (`contracts/backend_api_contract.md`) netleştiği andan itibaren mock verilerle paralelde geliştirilebilir.
+## Learning rule
+Do not add a technology just because it is fashionable. Every added component must solve a measurable project requirement.
