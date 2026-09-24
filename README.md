@@ -21,7 +21,7 @@ A modular-monolith research assistant for technical documents, with local vector
 The system is intentionally designed for low or near-zero cost:
 
 - Gemini 3.5 Flash-Lite is the default generation model, with model failover configured for Gemini 3.1 Flash-Lite and Gemini 3.8 Flash.
-- The default embedding provider is local FastEmbed with `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`, so document indexing does not consume Gemini embedding quota.
+- The default embedding provider is local FastEmbed with `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`, while the Render free deployment overrides this to Gemini Embedding 2 at 768 dimensions because Render's free instance has 512 MB RAM.
 - Qdrant runs locally.
 - SQLite runs locally.
 - Docker and GitHub Actions are used for reproducible development and CI.
@@ -78,7 +78,7 @@ Docker is optional for the free cloud deployment below.
 
 ## Free cloud deployment
 
-The repository includes a native Render Blueprint at render.yaml for the FastAPI backend. It uses Render's free web-service plan, the Python 3.11 runtime, the /ready health check, and INDEX_ON_STARTUP=true so bundled sample documents can rebuild the local demo index after a restart. Render free services have ephemeral filesystems and can spin down after 15 minutes of inactivity, so uploaded documents, SQLite data, and the local Qdrant index are not intended to be permanent on the free demo deployment.
+The repository includes a native Render Blueprint at render.yaml for the FastAPI backend. It uses Render's free web-service plan, the Python 3.11 runtime, the /ready health check, Gemini Embedding 2 at 768 dimensions to avoid the memory-heavy local ONNX embedding runtime, and INDEX_ON_STARTUP=true so bundled sample documents can rebuild the local demo index after a restart. Render free services have ephemeral filesystems and can spin down after 15 minutes of inactivity, so uploaded documents, SQLite data, and the local Qdrant index are not intended to be permanent on the free demo deployment.
 
 The Streamlit frontend can be deployed separately on Streamlit Community Cloud. Set these Streamlit secrets:
 
@@ -91,6 +91,8 @@ Set these Render environment variables/secrets:
     BACKEND_ACCESS_TOKEN = <same random token>
     GEMINI_MODEL = gemini-3.5-flash-lite
     GEMINI_FALLBACK_MODELS = gemini-3.1-flash-lite,gemini-3.8-flash
+    GEMINI_EMBEDDING_MODEL = gemini-embedding-2
+    GEMINI_EMBEDDING_DIMENSION = 768
 
 Do not commit .env, Streamlit secrets.toml, API keys, or access tokens.
 
