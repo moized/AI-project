@@ -1,44 +1,31 @@
-# TOOLS & DATA AI CONTEXT
+# Tools & Data Specialist Context — Current Stage
 
 ## Objective
-AI Araç ve Veri Katmanı'nı geliştirmek; ajanın (Agent) kararlar alırken kullanabileceği yapılandırılmış araçların (tools) şemalarını, fonksiyonlarını ve proje için gerekli test/örnek veri setlerini yönetmek.
+Provide small deterministic tools and reproducible evaluation data.
 
-## Responsibility
-1. Ajan tarafından kullanılacak araçların (örn. hesap makinesi, doküman arama, bilgi getirme vb.) Pydantic veya JSON şemalarını tanımlamak.
-2. Bu araçların python tabanlı çalıştırılabilir fonksiyonlarını yazmak.
-3. RAG ve diğer katmanların ihtiyaç duyduğu örnek dokümanları (`data/samples/`) ve test verilerini (`data/evaluation/ground_truth.json`) düzenlemek ve yönetmek.
+## Current tools
+- calculator
+- get_current_date
 
-## Inputs
-- Sistem gereksinimleri ve ajan katmanının araç ihtiyaçları.
-- Mevcut örnek dokümanlar ve veri spesifikasyonları (`data/data_specification.txt`).
+## Tool safety
+The calculator uses AST parsing with an explicit operator allow-list and bounded inputs/results. No `eval()`.
 
-## Expected Outputs
-- `contracts/tools_contract.json` (veya Python karşılığı): Araçların giriş/çıkış şemaları.
-- Araç fonksiyonlarının implementasyonları.
-- Gerekli test veri setleri.
+## Tool contract
+`contracts/tools_contract.json`
 
-## Dependencies
-- Bu katman projenin temelini oluşturur; diğer katmanlara (RAG, Agent) doğrudan bağımlılığı yoktur ancak ilk sırada tamamlanmalıdır.
+## Agent integration
+`tools/tool_implementation.py` exposes:
+- `TOOL_FUNCTIONS` — application allow-list
+- `TOOL_DECLARATIONS` — Gemini function schemas
 
-## Interfaces
-- Ajan katmanının doğrudan çağırabileceği Python fonksiyonları ve JSON şemaları.
+The model requests tools; the application executes them.
 
-## Constraints
-- Sıfır veya sıfıra yakın maliyet (yerel Python kütüphaneleri ve hafif yapılar).
-- Token verimliliği ve net, anlaşılır şemalar.
+## Data
+Keep sample technical documents and evaluation data small, realistic and version-controlled.
 
-## Relevant Technologies
-- Python
-- Pydantic
-- JSON
+## Tests
+Include valid inputs, malformed inputs, dangerous expressions, and deterministic edge cases.
 
-## Required Deliverables
-1. Araç şemaları ve fonksiyon tanımları.
-2. `contracts/tools_contract.json` sözleşmesi.
-3. Birim testleri (Unit tests) için test senaryoları.
-
-## What Must Not Be Changed
-- Read-only olarak işaretlenen temel kök dizin dosyaları ve mevcut ground-truth yapısı (koordinatör onayı olmadan bozulmamalıdır).
-
-## Testing Requirements
-- Her aracın (Tool) farklı girdilerle doğru sonuç döndürdüğünü doğrulayan birim testleri yazılmalıdır.
+## Do not
+- add tools merely for novelty
+- place network calls in deterministic utility tools unless explicitly required
