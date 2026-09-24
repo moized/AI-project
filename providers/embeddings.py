@@ -34,6 +34,28 @@ class EmbeddingRequest:
     mode: str
 
 
+class LocalSentenceTransformerEmbeddingProvider:
+    """Free local embedding provider; no API quota or network call at runtime."""
+    model_name = "BAAI/bge-small-en-v1.5"
+    dimension = 384
+
+    def __init__(self) -> None:
+        from sentence_transformers import SentenceTransformer
+        self.model = SentenceTransformer(self.model_name)
+
+    def embed_documents(self, documents: Sequence[tuple[str, str]]) -> list[list[float]]:
+        texts = [f"title: {title} | text: {text}" for title, text in documents]
+        vectors = self.model.encode(texts, normalize_embeddings=True)
+        return vectors.tolist()
+
+    def embed_queries(self, queries: Sequence[str]) -> list[list[float]]:
+        vectors = self.model.encode(
+            [f"Represent this sentence for searching relevant passages: {query}" for query in queries],
+            normalize_embeddings=True,
+        )
+        return vectors.tolist()
+
+
 class GeminiEmbeddingProvider:
     """Gemini Embedding 2 adapter.
 
