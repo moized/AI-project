@@ -6,11 +6,13 @@ This file records the engineering decisions for the current repository state.
 Use the official `google-genai` SDK.
 
 The application model is configurable with `GEMINI_MODEL`; current default:
-`gemini-3.8-flash`.
+`gemini-3.5-flash-lite`.
 
-Gemini 3.8 Flash is currently GA and supports function calling and structured outputs. The Gemini Developer API currently lists a Free Tier for Gemini 3.8 Flash. Do not hard-code the model into business logic.
+`GEMINI_FALLBACK_MODELS` defaults to `gemini-3.1-flash-lite,gemini-3.8-flash`. Keep model selection configurable because quota availability is project-specific and can change over time. Do not hard-code model assumptions into business logic.
 
-Use the Gemini Interactions API for agent workflows. For tool loops, prefer server-side interaction chaining with `previous_interaction_id` so application code does not repeatedly resend the full history.
+Use the Gemini Interactions API for agent workflows. For tool loops, prefer server-side interaction chaining with `previous_interaction_id` so application code does not repeatedly resend the full history. Disable SDK-level automatic retries in the provider so the application owns the retry/failover policy and does not accidentally multiply attempts.
+
+Retry policy: daily/RPD quota errors immediately fail over to the next model and are skipped until the next midnight-Pacific quota reset. Other transient 429/5xx failures use bounded exponential delays of 2, 4, 8, 16, and 32 seconds; when the API supplies an explicit retry delay, the provider waits at least that long.
 
 ## Embeddings
 The default embedding path is local and free:
