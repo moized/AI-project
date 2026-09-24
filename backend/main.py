@@ -89,7 +89,9 @@ def list_documents() -> DocumentListResponse:
     status_code=status.HTTP_201_CREATED,
     tags=["documents"],
 )
-async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
+async def upload_document(
+    file: UploadFile = File(...),  # noqa: B008
+) -> UploadResponse:
     filename = Path(file.filename or "").name
     if not filename:
         raise HTTPException(status_code=400, detail="Filename is required.")
@@ -138,7 +140,10 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
         raise
     except OSError as exc:
         logger.exception("Document upload failed.")
-        raise HTTPException(status_code=500, detail="Document upload failed.") from exc
+        raise HTTPException(
+            status_code=500,
+            detail="Document upload failed.",
+        ) from exc
     finally:
         await file.close()
         if temp_path and temp_path.exists():
@@ -157,7 +162,7 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
     tags=["documents"],
 )
 def index_documents(
-    rag: SimpleRAGPipeline = Depends(get_rag),
+    rag: SimpleRAGPipeline = Depends(get_rag),  # noqa: B008
 ) -> IndexResponse:
     try:
         result = rag.index_documents()
@@ -182,8 +187,8 @@ def index_documents(
 )
 def chat_endpoint(
     request: QueryRequest,
-    db: Session = Depends(get_db),
-    agent: ResearchAgent = Depends(get_agent),
+    db: Session = Depends(get_db),  # noqa: B008
+    agent: ResearchAgent = Depends(get_agent),  # noqa: B008
 ) -> QueryResponse:
     try:
         result = agent.run(request.query)
