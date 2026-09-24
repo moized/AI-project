@@ -28,6 +28,7 @@ def get_backend_status() -> bool:
         return False
 
 
+@st.cache_data(ttl=5)
 def get_documents() -> list[str]:
     try:
         response = requests.get(
