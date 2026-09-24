@@ -1,338 +1,78 @@
-# CURRENT TECHNOLOGY GUIDANCE
+# Current Technology Guidance
 
-This document provides current technology guidance for the AI Research Assistant project.
+This file records the engineering decisions for the current repository state.
 
-Do not rely on old tutorials, old SDKs, or outdated architectural patterns when making decisions.
+## Gemini
+Use the official `google-genai` SDK.
 
-Use this guidance together with the project context and implementation plan.
+The application model is configurable with `GEMINI_MODEL`; current default:
+`gemini-3.8-flash`.
 
-## 1. Gemini API
+Gemini 3.8 Flash is currently GA and supports function calling and structured outputs. The Gemini Developer API currently lists a Free Tier for Gemini 3.8 Flash. Do not hard-code the model into business logic.
 
-For Python Gemini development, prefer the official:
+Use the Gemini Interactions API for agent workflows. For tool loops, prefer server-side interaction chaining with `previous_interaction_id` so application code does not repeatedly resend the full history.
 
-`google-genai`
+## Embeddings
+The default embedding path is local and free:
 
-Do not use the old:
+`FastEmbed -> ONNX -> sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 -> 384 dimensions`
 
-`google-generativeai`
+FastEmbed is intentionally used instead of Sentence Transformers/PyTorch because it is lightweight and CPU-oriented.
 
-unless there is a specific compatibility reason.
+Gemini Embedding 2 remains an optional replaceable provider. It must not be required for normal low-cost development.
 
-Google currently recommends the Google GenAI SDK for production Gemini API development.
+When changing embedding provider/model/dimension, treat the vector collection as incompatible until it is deliberately reindexed.
 
-For new Gemini application designs, prefer the current **Interactions API** architecture where appropriate.
+## RAG
+Keep these responsibilities separate:
 
-Do not hard-code the exact Gemini model version throughout the application.
+`document -> extraction -> chunking -> embedding -> vector storage -> retrieval -> context assembly`
 
-Use configuration/environment variables for model selection, for example:
+Retrieval must return source metadata and scores.
 
-`GEMINI_MODEL`
+Indexing must be separate from querying.
 
-The coding AI may use one Gemini model while the application may use another model.
+The RAG contract is `contracts/rag_contract.json`.
 
-The architecture must allow the application model to be changed without changing business logic.
+## Tools
+Use explicit Gemini function declarations.
 
-## 2. Structured Outputs
+The model never receives permission to execute arbitrary Python. The application maps requested tool names to an allow-list and executes only those functions.
 
-When the application requires predictable structured responses, prefer schema-based structured output.
+Keep tools deterministic where possible.
 
-Use strongly typed schemas.
+## Backend
+Use FastAPI + Pydantic + SQLAlchemy.
 
-Python/Pydantic models are preferred for application-level validation and structured data.
+SQLite is acceptable for this local, low-cost project. Do not introduce PostgreSQL until actual concurrent/scale requirements justify it.
 
-Do not depend on free-form LLM text when a structured result is required.
+Use versioned API paths under `/api/v1`.
 
-Always validate model output in application code.
+## Architecture
+Prefer a modular monolith.
 
-A syntactically valid structured response can still contain semantically incorrect values.
+Do not introduce microservices, MCP, Kubernetes, or other infrastructure merely for fashion. Add them only when a concrete requirement is demonstrated.
 
-## 3. Function Calling / Tools
+## Testing
+Test:
+- unit behavior
+- component contracts
+- API validation
+- failure cases
+- retrieval relevance
+- agent tool behavior
 
-For tools that the Gemini model must invoke, use Gemini function calling.
+Model/network calls should be replaceable by deterministic fakes in CI.
 
-A tool should have:
+## Deployment
+Docker Compose runs backend and frontend separately.
 
-* clear name
-* clear description
-* typed parameters
-* required parameters
-* predictable result format
-* explicit error behavior
+Runtime state stays outside Git:
+- Qdrant data
+- SQLite DB
+- FastEmbed model cache
+- uploaded runtime documents when appropriate
+- secrets
 
-The model chooses or requests a tool call.
-
-The application executes the actual Python function.
-
-The model does NOT directly execute arbitrary application code.
-
-Keep tools small and deterministic whenever possible.
-
-Prefer normal function calling for this project.
-
-Do not introduce MCP merely because it is modern.
-
-Use MCP later only when interoperability with external MCP-compatible systems provides a real benefit.
-
-## 4. Data Contracts
-
-Use explicit schemas for communication between components.
-
-Prefer:
-
-* Python type hints
-* Pydantic models
-* JSON Schema
-* JSON/JSONL for simple persisted test data
-
-A component should expose what another component needs to know without exposing its internal implementation.
-
-Use black-box interfaces.
-
-Example:
-
-`input -> component -> structured output`
-
-The consuming component should not need to know how the internal implementation works.
-
-## 5. Tools & Data Layer
-
-The Tools & Data layer should focus on:
-
-* synthetic project data
-* test data
-* deterministic utility tools
-* structured data
-* tool schemas
-* tool validation
-
-Tools should generally be:
-
-* deterministic
-* small
-* independently testable
-* easy for an agent to call
-* cheap or free to execute
-
-Examples:
-
-* calculator
-* date/time operations
-* structured dataset queries
-* document metadata lookup
-* controlled search functions
-
-Do not build unnecessary tools.
-
-## 6. Test Data
-
-Create a small realistic dataset early.
-
-The dataset should support development and evaluation.
-
-Use version-controlled formats such as:
-
-* JSONL
-* JSON
-* CSV
-* TXT
-* Markdown
-* PDF when document behavior needs to be tested
-
-Include normal cases and failure/edge cases.
-
-For question-answer evaluation, store enough information to know:
-
-* the question
-* expected relevant source
-* expected relevant passage where practical
-* expected answer or answer criteria
-
-Synthetic data is acceptable when real data is unavailable.
-
-Do not generate huge datasets merely to make the project appear large.
-
-## 7. RAG
-
-RAG should be modular.
-
-Conceptually:
-
-`document -> extraction -> chunks -> metadata -> embeddings -> retrieval -> context -> Gemini`
-
-The retrieval layer must return enough source information for citations.
-
-Do not hide retrieval results inside an opaque prompt.
-
-The system should be able to inspect:
-
-* retrieved source
-* chunk
-* metadata
-* retrieval score where available
-
-For strict zero-cost development, prefer local/open-source components where practical.
-
-A managed retrieval service must not become a mandatory dependency if it creates monetary cost.
-
-## 8. Embeddings
-
-The current Gemini embedding generation includes `gemini-embedding-2`.
-
-However, the project has a strict zero/near-zero cost requirement.
-
-Therefore:
-
-* evaluate local/open-source embeddings first when practical
-* use Gemini embeddings only when the current free-tier availability and limits make them suitable
-* keep the embedding provider replaceable
-* do not tightly couple application logic to one embedding provider
-
-Embedding model changes require care because embedding spaces are not interchangeable.
-
-If the embedding model changes, existing vectors may need to be regenerated.
-
-## 9. Vector Storage
-
-Prefer a local/free vector solution during development.
-
-A vector store should support:
-
-* persistent storage
-* metadata
-* similarity retrieval
-* reproducible indexing
-* simple local development
-
-Do not choose a paid managed vector database when a local solution is sufficient.
-
-The vector-storage implementation should remain replaceable through an interface.
-
-## 10. Backend
-
-Use:
-
-* Python
-* FastAPI
-* Pydantic
-
-FastAPI's current design uses Pydantic models for request/response validation and generates OpenAPI/JSON Schema automatically.
-
-Keep the backend responsible for application/API concerns.
-
-Do not move RAG internals, agent logic, or frontend logic into the API layer unnecessarily.
-
-## 11. Database
-
-Start with the simplest database that satisfies the actual requirement.
-
-For a zero-cost local project, SQLite is acceptable when concurrency and scale do not require a server database.
-
-Do not introduce PostgreSQL merely because it is common in companies.
-
-Use PostgreSQL later if an actual requirement justifies it.
-
-## 12. Agent
-
-Do not start with a complex autonomous multi-agent system.
-
-Start with a simple tool-using workflow.
-
-The agent should have a limited set of clearly defined tools.
-
-Prefer:
-
-`user -> agent -> tool -> result -> final answer`
-
-Add loops only when the task actually requires them.
-
-Use structured tool calls rather than parsing arbitrary text into actions.
-
-## 13. Application Architecture
-
-Prefer modular monolith architecture for the first production-ready version.
-
-Do not create microservices unless a real requirement justifies them.
-
-The project should be:
-
-* modular
-* testable
-* deployable
-* understandable
-* inexpensive
-
-Complexity must have a reason.
-
-## 14. Testing
-
-Use automated tests from the beginning.
-
-Test at multiple levels:
-
-* unit tests
-* component tests
-* integration tests
-* end-to-end tests
-
-LLM output should not be tested only by exact string equality.
-
-Use structured validation and task-specific evaluation where appropriate.
-
-## 15. Deployment
-
-The application should be containerizable.
-
-Prefer Docker for reproducible deployment.
-
-The system must remain runnable locally without paid infrastructure.
-
-Cloud deployment is optional and must not be required for the project to function.
-
-## 16. Token Efficiency
-
-Token efficiency is a core requirement.
-
-Prefer:
-
-* small prompts
-* focused context
-* structured outputs
-* deterministic tools
-* short tool results
-* limited agent loops
-* cached/reused data where practical
-* local processing where possible
-
-Do not repeatedly send entire documents, repositories, or conversations when a smaller representation is sufficient.
-
-## 17. General Technology Decision Rule
-
-When several technologies can solve the problem:
-
-1. Prefer the current officially supported technology.
-2. Prefer the simplest solution.
-3. Prefer free/local/open-source solutions.
-4. Prefer replaceable components.
-5. Prefer strong typing and explicit interfaces.
-6. Prefer deterministic code over unnecessary LLM behavior.
-7. Minimize token/API usage.
-8. Avoid introducing frameworks without a clear benefit.
-
-Do not select a technology because it is fashionable.
-
-Select it because it solves a concrete project requirement.
-
-## 18. Important
-
-This guidance describes the current technology landscape and preferred engineering direction.
-
-It does NOT mean every listed technology must be used.
-
-The Coordinator should use this information to make appropriate decisions for the actual project.
-
-The Coordinator must not redesign the entire project simply to use the newest technology.
-
-The objective remains:
-
-**Build a genuinely production-ready AI Research Assistant with zero/near-zero monetary cost and efficient use of AI tokens.**
-
+## General rule
+Choose the simplest current technology that satisfies the requirement, while preserving replaceability, testability, security, observability, and low cost.
