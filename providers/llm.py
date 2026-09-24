@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Callable, Protocol, Sequence
 
 from google import genai
-from google.genai import types
 
 from core.config import settings
 
@@ -36,11 +36,7 @@ class LLMProvider(Protocol):
 
 
 class GeminiLLMProvider:
-    """Controlled Gemini function-calling adapter.
-
-    Automatic function execution is disabled so the application remains the
-    authority over which Python functions may execute.
-    """
+    """Gemini Interactions API adapter with application-controlled tool execution."""
 
     def __init__(
         self,
@@ -67,45 +63,44 @@ class GeminiLLMProvider:
                 "GEMINI_API_KEY is not configured; LLM generation is unavailable."
             )
 
-        config = types.GenerateContentConfig(
-            tools=list(tools),
-            automatic_function_calling=types.AutomaticFunctionCallingConfig(
-                disable=True
-            ),
+        system_instruction = (
+            "You are a careful AI research assistant. "
+            "Use retrieved evidence when relevant, do not invent sources, "
+            "and use tools only when necessary."
         )
 
-        contents: list[types.Content] = [
-            types.Content(
-                role="user",
-                parts=[types.Part.from_text(text=prompt)],
-            )
+        history: list[dict[str, Any]] = [
+            {
+                "type": "user_input",
+                "content": [{"type": "text", "text": prompt}],
+            }
         ]
         records: list[ToolCall] = []
 
         for _ in range(self.max_tool_rounds + 1):
-            response = self.client.models.generate_content(
+            interaction = self.client.interactions.create(
                 model=self.model_name,
-                contents=contents,
-                config=config,
+                store=False,
+                input=history,
+                system_instruction=system_instruction,
+                tools=list(tools),
             )
 
-            candidate = response.candidates[0] if response.candidates else None
-            if candidate is None or candidate.content is None:
-                raise RuntimeError("Gemini returned no usable candidate content.")
+            for step in interaction.steps:
+                history.append(step.model_dump())
 
-            function_calls = list(response.function_calls or [])
+            function_calls = [
+                step for step in interaction.steps if step.type == "function_call"
+            ]
+
             if not function_calls:
-                text = (response.text or "").strip()
+                text = (interaction.output_text or "").strip()
                 if not text:
                     raise RuntimeError("Gemini returned an empty final response.")
                 return LLMResponse(text=text, tool_calls=records)
 
-            contents.append(candidate.content)
-            function_response_parts: list[types.Part] = []
-
             for call in function_calls:
-                arguments = dict(call.args or {})
-
+                arguments = dict(call.arguments or {})
                 try:
                     result = tool_executor(call.name, arguments)
                 except Exception as exc:
@@ -123,20 +118,23 @@ class GeminiLLMProvider:
                     )
                 )
 
-                function_response_parts.append(
-                    types.Part.from_function_response(
-                        name=call.name,
-                        response={"result": result},
-                        id=getattr(call, "id", None),
-                    )
+                history.append(
+                    {
+                        "type": "function_result",
+                        "name": call.name,
+                        "call_id": call.id,
+                        "result": [
+                            {
+                                "type": "text",
+                                "text": json.dumps(
+                                    result,
+                                    ensure_ascii=False,
+                                    default=str,
+                                ),
+                            }
+                        ],
+                    }
                 )
-
-            contents.append(
-                types.Content(
-                    role="user",
-                    parts=function_response_parts,
-                )
-            )
 
         raise RuntimeError("Agent exceeded the configured tool-call round limit.")
 
