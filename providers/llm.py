@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Callable, Protocol, Sequence
+from typing import Any, Protocol
 
 from google import genai
 
@@ -36,7 +37,7 @@ class LLMProvider(Protocol):
 
 
 class GeminiLLMProvider:
-    """Gemini Interactions API adapter with application-controlled tool execution."""
+    """Gemini Interactions API adapter with bounded, application-controlled tools."""
 
     def __init__(
         self,
@@ -69,26 +70,15 @@ class GeminiLLMProvider:
             "and use tools only when necessary."
         )
 
-        history: list[dict[str, Any]] = [
-            {
-                "type": "user_input",
-                "content": [{"type": "text", "text": prompt}],
-            }
-        ]
         records: list[ToolCall] = []
+        interaction = self.client.interactions.create(
+            model=self.model_name,
+            input=prompt,
+            system_instruction=system_instruction,
+            tools=list(tools),
+        )
 
         for _ in range(self.max_tool_rounds + 1):
-            interaction = self.client.interactions.create(
-                model=self.model_name,
-                store=False,
-                input=history,
-                system_instruction=system_instruction,
-                tools=list(tools),
-            )
-
-            for step in interaction.steps:
-                history.append(step.model_dump())
-
             function_calls = [
                 step for step in interaction.steps if step.type == "function_call"
             ]
@@ -99,8 +89,11 @@ class GeminiLLMProvider:
                     raise RuntimeError("Gemini returned an empty final response.")
                 return LLMResponse(text=text, tool_calls=records)
 
+            function_results = []
+
             for call in function_calls:
                 arguments = dict(call.arguments or {})
+
                 try:
                     result = tool_executor(call.name, arguments)
                 except Exception as exc:
@@ -118,7 +111,7 @@ class GeminiLLMProvider:
                     )
                 )
 
-                history.append(
+                function_results.append(
                     {
                         "type": "function_result",
                         "name": call.name,
@@ -135,6 +128,12 @@ class GeminiLLMProvider:
                         ],
                     }
                 )
+
+            interaction = self.client.interactions.create(
+                previous_interaction_id=interaction.id,
+                input=function_results,
+                tools=list(tools),
+            )
 
         raise RuntimeError("Agent exceeded the configured tool-call round limit.")
 
