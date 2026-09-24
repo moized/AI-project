@@ -62,7 +62,7 @@ class Settings:
 
         return cls(
             gemini_api_key=os.getenv("GEMINI_API_KEY") or None,
-            gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.6-flash"),
+            gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
             gemini_embedding_model=os.getenv(
                 "GEMINI_EMBEDDING_MODEL",
                 "gemini-embedding-2",
