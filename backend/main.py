@@ -63,7 +63,21 @@ def get_agent() -> ResearchAgent:
 
 @app.get("/health", response_model=HealthResponse, tags=["system"])
 def health_check() -> HealthResponse:
+    """Liveness probe: the web process is responding."""
     return HealthResponse(status="ok")
+
+
+@app.get("/ready", response_model=HealthResponse, tags=["system"])
+def readiness_check() -> HealthResponse:
+    """Readiness probe for the database and local vector store."""
+    try:
+        init_db()
+        rag = get_rag()
+        rag.qdrant.get_collection(rag.collection_name)
+        return HealthResponse(status="ok")
+    except Exception as exc:
+        logger.exception("Readiness check failed.")
+        raise HTTPException(status_code=503, detail="Service is not ready.") from exc
 
 
 @app.get(
