@@ -1,5 +1,5 @@
-from rag.rag_pipeline import SimpleRAGPipeline
 from providers.embeddings import DeterministicEmbeddingProvider
+from rag.rag_pipeline import SimpleRAGPipeline
 
 
 def test_chunking_and_metadata():
