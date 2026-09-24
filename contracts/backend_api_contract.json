@@ -1,0 +1,36 @@
+{
+  "version": "1.0",
+  "base": "/api/v1",
+  "endpoints": {
+    "GET /documents": {
+      "purpose": "List supported uploaded documents.",
+      "response": {"documents": ["string"]}
+    },
+    "POST /documents/upload": {
+      "purpose": "Upload one supported document.",
+      "request": "multipart/form-data field file",
+      "supported_extensions": [".pdf", ".md", ".txt"],
+      "errors": {"400": "missing filename", "413": "file exceeds MAX_UPLOAD_MB", "415": "unsupported file type"},
+      "response": {"status": "ok", "filename": "string"}
+    },
+    "POST /documents/index": {
+      "purpose": "Incrementally synchronize documents into the vector index.",
+      "response": {
+        "status": "ok|partial",
+        "message": "string",
+        "result": {"indexed": "integer", "unchanged": "integer", "failed": "integer", "chunks": "integer"}
+      }
+    },
+    "POST /chat": {
+      "purpose": "Answer a user question using RAG and controlled tools.",
+      "request": {"query": "string, 1-8000 chars"},
+      "response": {
+        "query": "string",
+        "answer": "string",
+        "sources": [{"id": "string", "source": "string", "page": "integer|null", "score": "number"}],
+        "tool_calls": [{"name": "string", "arguments": "object", "result": "any"}]
+      }
+    }
+  },
+  "health": {"GET /health": {"response": {"status": "ok"}}}
+}
