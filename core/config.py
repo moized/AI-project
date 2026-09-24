@@ -56,64 +56,40 @@ class Settings:
     def from_env(cls) -> "Settings":
         chunk_size = _env_int("RAG_CHUNK_SIZE", 1200, 100)
         chunk_overlap = _env_int("RAG_CHUNK_OVERLAP", 200, 0)
-
         if chunk_overlap >= chunk_size:
             raise ValueError("RAG_CHUNK_OVERLAP must be smaller than RAG_CHUNK_SIZE")
 
         return cls(
             gemini_api_key=os.getenv("GEMINI_API_KEY") or None,
             gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.6-flash"),
-            gemini_embedding_model=os.getenv(
-                "GEMINI_EMBEDDING_MODEL",
-                "gemini-embedding-2",
+            gemini_embedding_model=os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-2"),
+            gemini_embedding_dimension=_env_int("GEMINI_EMBEDDING_DIMENSION", 768, 128),
+            local_embedding_model=os.getenv(
+                "LOCAL_EMBEDDING_MODEL",
+                "intfloat/multilingual-e5-small",
             ),
-            gemini_embedding_dimension=_env_int(
-                "GEMINI_EMBEDDING_DIMENSION",
-                768,
+            local_embedding_dimension=_env_int(
+                "LOCAL_EMBEDDING_DIMENSION",
+                384,
                 128,
             ),
             llm_provider=os.getenv("LLM_PROVIDER", "gemini").lower(),
             embedding_provider=os.getenv("EMBEDDING_PROVIDER", "local").lower(),
             rag_samples_dir=Path(os.getenv("RAG_SAMPLES_DIR", "data/samples")),
             qdrant_path=Path(os.getenv("QDRANT_PATH", "qdrant_storage")),
-            rag_collection_name=os.getenv(
-                "RAG_COLLECTION_NAME",
-                "research_docs",
-            ),
+            rag_collection_name=os.getenv("RAG_COLLECTION_NAME", "research_docs"),
             rag_chunk_size=chunk_size,
             rag_chunk_overlap=chunk_overlap,
-            rag_embedding_batch_size=_env_int(
-                "RAG_EMBEDDING_BATCH_SIZE",
-                16,
-                1,
-            ),
-            rag_embedding_max_retries=_env_int(
-                "RAG_EMBEDDING_MAX_RETRIES",
-                5,
-                0,
-            ),
+            rag_embedding_batch_size=_env_int("RAG_EMBEDDING_BATCH_SIZE", 16, 1),
+            rag_embedding_max_retries=_env_int("RAG_EMBEDDING_MAX_RETRIES", 5, 0),
             rag_embedding_retry_seconds=_env_float(
                 "RAG_EMBEDDING_RETRY_SECONDS",
                 2.0,
                 0.1,
             ),
-            local_embedding_model=os.getenv(
-                "LOCAL_EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5"
-            ),
-            local_embedding_dimension=_env_int(
-                "LOCAL_EMBEDDING_DIMENSION", 384, 128
-            ),
-            rag_min_retrieval_score=_env_float(
-                "RAG_MIN_RETRIEVAL_SCORE",
-                0.20,
-                -1.0,
-            ),
+            rag_min_retrieval_score=_env_float("RAG_MIN_RETRIEVAL_SCORE", 0.20, -1.0),
             rag_top_k=_env_int("RAG_TOP_K", 5, 1),
-            rag_max_context_chars=_env_int(
-                "RAG_MAX_CONTEXT_CHARS",
-                12000,
-                1000,
-            ),
+            rag_max_context_chars=_env_int("RAG_MAX_CONTEXT_CHARS", 12000, 1000),
             database_url=os.getenv(
                 "DATABASE_URL",
                 "sqlite:///./runtime/research_assistant.db",
