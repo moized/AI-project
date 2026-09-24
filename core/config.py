@@ -27,6 +27,7 @@ def _env_float(name: str, default: float, minimum: float | None = None) -> float
 class Settings:
     gemini_api_key: str | None
     gemini_model: str
+    gemini_fallback_models: tuple[str, ...]
     gemini_embedding_model: str
     gemini_embedding_dimension: int
     local_embedding_model: str
@@ -62,7 +63,15 @@ class Settings:
 
         return cls(
             gemini_api_key=os.getenv("GEMINI_API_KEY") or None,
-            gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
+            gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite"),
+            gemini_fallback_models=tuple(
+                model.strip()
+                for model in os.getenv(
+                    "GEMINI_FALLBACK_MODELS",
+                    "gemini-3.1-flash-lite,gemini-3.8-flash",
+                ).split(",")
+                if model.strip()
+            ),
             gemini_embedding_model=os.getenv(
                 "GEMINI_EMBEDDING_MODEL",
                 "gemini-embedding-2",
