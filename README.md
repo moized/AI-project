@@ -72,7 +72,29 @@ Create .env, then:
 
 The backend is available on port 8000 and Streamlit on port 8501.
 
-Persistent runtime state is intentionally not committed to Git. Docker stores Qdrant, SQLite, and Hugging Face model cache in named volumes.
+Persistent runtime state is intentionally not committed to Git. Docker stores Qdrant, SQLite, and FastEmbed model cache in named volumes.
+
+Docker is optional for the free cloud deployment below.
+
+## Free cloud deployment
+
+The repository includes a native Render Blueprint at render.yaml for the FastAPI backend. It uses Render's free web-service plan, the Python 3.11 runtime, the /ready health check, and INDEX_ON_STARTUP=true so bundled sample documents can rebuild the local demo index after a restart. Render free services have ephemeral filesystems and can spin down after 15 minutes of inactivity, so uploaded documents, SQLite data, and the local Qdrant index are not intended to be permanent on the free demo deployment.
+
+The Streamlit frontend can be deployed separately on Streamlit Community Cloud. Set these Streamlit secrets:
+
+    BACKEND_URL = "https://YOUR-RENDER-SERVICE.onrender.com"
+    BACKEND_ACCESS_TOKEN = "same random token configured on Render"
+
+Set these Render environment variables/secrets:
+
+    GEMINI_API_KEY = <secret>
+    BACKEND_ACCESS_TOKEN = <same random token>
+    GEMINI_MODEL = gemini-3.5-flash-lite
+    GEMINI_FALLBACK_MODELS = gemini-3.1-flash-lite,gemini-3.8-flash
+
+Do not commit .env, Streamlit secrets.toml, API keys, or access tokens.
+
+Render free services are suitable for a hobby/demo deployment, not a durable production database. Streamlit Community Cloud is free for sharing Streamlit apps.
 
 ## API
 
