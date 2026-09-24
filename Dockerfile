@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1     PYTHONUNBUFFERED=1     PIP_NO_CACHE_DIR=1     HF_HOME=/home/app/.cache/huggingface
+ENV PYTHONDONTWRITEBYTECODE=1     PYTHONUNBUFFERED=1     PIP_NO_CACHE_DIR=1     FASTEMBED_CACHE_PATH=/home/app/.cache/fastembed
 
 WORKDIR /app
 
@@ -20,7 +20,7 @@ COPY contracts ./contracts
 COPY data ./data
 COPY .streamlit ./.streamlit
 
-RUN mkdir -p /app/data/samples /app/qdrant_storage /app/runtime /home/app/.cache/huggingface     && chown -R app:app /app /home/app
+RUN mkdir -p /app/data/samples /app/qdrant_storage /app/runtime /home/app/.cache/fastembed     && chown -R app:app /app /home/app
 
 USER app
 
