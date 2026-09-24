@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 
 import requests
 import streamlit as st
@@ -31,20 +32,35 @@ BACKEND_HEADERS = (
     else {}
 )
 
-REQUEST_TIMEOUT = (5, 180)
+HEALTH_TIMEOUT_SECONDS = 5
+HEALTH_RETRY_ATTEMPTS = 12
+HEALTH_RETRY_DELAY_SECONDS = 10
+API_TIMEOUT = (10, 180)
+
+
+def wait_for_backend() -> bool:
+    """Wake a sleeping Render service and retry for about three minutes."""
+    for attempt in range(HEALTH_RETRY_ATTEMPTS):
+        try:
+            response = requests.get(
+                f"{BACKEND_URL}/health",
+                headers=BACKEND_HEADERS,
+                timeout=HEALTH_TIMEOUT_SECONDS,
+            )
+            if response.ok:
+                return True
+        except requests.RequestException:
+            pass
+
+        if attempt < HEALTH_RETRY_ATTEMPTS - 1:
+            time.sleep(HEALTH_RETRY_DELAY_SECONDS)
+
+    return False
 
 
 @st.cache_data(ttl=5)
 def get_backend_status() -> bool:
-    try:
-        response = requests.get(
-            f"{BACKEND_URL}/health",
-            headers=BACKEND_HEADERS,
-            timeout=REQUEST_TIMEOUT[0],
-        )
-        return response.ok
-    except requests.RequestException:
-        return False
+    return wait_for_backend()
 
 
 @st.cache_data(ttl=5)
@@ -53,7 +69,7 @@ def get_documents() -> list[str]:
         response = requests.get(
             f"{BACKEND_URL}/api/v1/documents",
             headers=BACKEND_HEADERS,
-            timeout=REQUEST_TIMEOUT[0],
+            timeout=API_TIMEOUT,
         )
         response.raise_for_status()
         return response.json().get("documents", [])
@@ -74,7 +90,7 @@ def upload_document(uploaded_file) -> bool:
                     uploaded_file.type or "application/octet-stream",
                 )
             },
-            timeout=REQUEST_TIMEOUT,
+            timeout=API_TIMEOUT,
         )
         response.raise_for_status()
         return True
@@ -91,7 +107,7 @@ def index_documents() -> bool:
         response = requests.post(
             f"{BACKEND_URL}/api/v1/documents/index",
             headers=BACKEND_HEADERS,
-            timeout=REQUEST_TIMEOUT,
+            timeout=API_TIMEOUT,
         )
         response.raise_for_status()
         result = response.json()
@@ -145,10 +161,16 @@ def render_documents() -> None:
 
 
 with st.sidebar:
-    if get_backend_status():
+    with st.spinner("Backend bağlantısı kontrol ediliyor..."):
+        backend_online = get_backend_status()
+
+    if backend_online:
         st.success("Backend: Çevrimiçi 🟢")
     else:
-        st.error("Backend: Bağlı Değil 🔴")
+        st.error(
+            "Backend: Bağlı Değil 🔴 "
+            "(Render backend'i 2–3 dakika içinde uyanmamış olabilir.)"
+        )
 
     render_documents()
 
@@ -192,6 +214,10 @@ if query:
         st.warning("Lütfen geçerli bir soru girin.")
         st.stop()
 
+    if not backend_online:
+        st.error("Backend hazır değil. Lütfen sayfayı yenileyin ve tekrar deneyin.")
+        st.stop()
+
     st.session_state.messages.append(
         {"role": "user", "content": query}
     )
@@ -205,7 +231,7 @@ if query:
                 f"{BACKEND_URL}/api/v1/chat",
                 headers=BACKEND_HEADERS,
                 json={"query": query},
-                timeout=REQUEST_TIMEOUT,
+                timeout=API_TIMEOUT,
             )
             response.raise_for_status()
 
