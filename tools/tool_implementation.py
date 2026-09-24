@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import ast
 import operator
+from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import Any, Callable
+from typing import Any
 
 
 _OPERATORS: dict[type[ast.operator], Callable[[float, float], float]] = {
@@ -25,21 +26,27 @@ def calculator(expression: str) -> str:
         tree = ast.parse(expression, mode="eval")
 
         def evaluate(node: ast.AST) -> float:
-            if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+            if isinstance(node, ast.Constant) and type(node.value) in (int, float):
                 return float(node.value)
 
-            if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+            if isinstance(node, ast.UnaryOp) and isinstance(
+                node.op,
+                (ast.UAdd, ast.USub),
+            ):
                 value = evaluate(node.operand)
                 return value if isinstance(node.op, ast.UAdd) else -value
 
             if isinstance(node, ast.BinOp) and type(node.op) in _OPERATORS:
                 left = evaluate(node.left)
                 right = evaluate(node.right)
+
                 if isinstance(node.op, ast.Pow) and abs(right) > 20:
                     raise ValueError("exponent too large")
+
                 result = _OPERATORS[type(node.op)](left, right)
                 if abs(result) > 1e100:
                     raise ValueError("result too large")
+
                 return result
 
             raise ValueError("unsupported expression")
@@ -47,7 +54,7 @@ def calculator(expression: str) -> str:
         result = evaluate(tree.body)
         return str(int(result) if result.is_integer() else result)
 
-    except Exception as exc:
+    except (SyntaxError, ValueError, TypeError, ZeroDivisionError, OverflowError) as exc:
         return f"Error: {type(exc).__name__}: invalid arithmetic expression."
 
 
