@@ -7,7 +7,6 @@ from functools import lru_cache
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
-from qdrant_client import QdrantClient
 from sqlalchemy.orm import Session
 
 from agent.agent_core import ResearchAgent
