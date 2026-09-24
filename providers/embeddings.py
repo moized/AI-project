@@ -35,8 +35,8 @@ class EmbeddingRequest:
     mode: str
 
 
-class LocalSentenceTransformerEmbeddingProvider:
-    """Free local multilingual retrieval embeddings."""
+class LocalFastEmbedProvider:
+    """Free local multilingual embeddings through FastEmbed/ONNX."""
 
     def __init__(self, model_name: str | None = None) -> None:
         self.model_name = model_name or settings.local_embedding_model
@@ -46,39 +46,40 @@ class LocalSentenceTransformerEmbeddingProvider:
     @property
     def model(self):
         if self._model is None:
-            from sentence_transformers import SentenceTransformer
+            from fastembed import TextEmbedding
 
-            self._model = SentenceTransformer(self.model_name)
-            actual_dimension = self._model.get_sentence_embedding_dimension()
-            if actual_dimension != self.dimension:
+            self._model = TextEmbedding(model_name=self.model_name)
+        return self._model
+
+    def _encode(self, texts: Sequence[str]) -> list[list[float]]:
+        vectors = [vector.tolist() for vector in self.model.embed(list(texts))]
+        if len(vectors) != len(texts):
+            raise RuntimeError(
+                f"Embedding provider returned {len(vectors)} vectors "
+                f"for {len(texts)} inputs."
+            )
+
+        for vector in vectors:
+            if len(vector) != self.dimension:
                 raise RuntimeError(
                     f"Configured local embedding dimension is {self.dimension}, "
-                    f"but model reports {actual_dimension}."
+                    f"received {len(vector)}."
                 )
-        return self._model
+
+        return vectors
 
     def embed_documents(
         self,
         documents: Sequence[tuple[str, str]],
     ) -> list[list[float]]:
         texts = [
-            f"passage: title: {title} | text: {text}"
+            f"Title: {title}\nText: {text}"
             for title, text in documents
         ]
-        vectors = self.model.encode(
-            texts,
-            normalize_embeddings=True,
-            show_progress_bar=False,
-        )
-        return vectors.tolist()
+        return self._encode(texts)
 
     def embed_queries(self, queries: Sequence[str]) -> list[list[float]]:
-        vectors = self.model.encode(
-            [f"query: {query}" for query in queries],
-            normalize_embeddings=True,
-            show_progress_bar=False,
-        )
-        return vectors.tolist()
+        return self._encode(queries)
 
 
 class GeminiEmbeddingProvider:
