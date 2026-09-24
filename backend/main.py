@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import logging
-import os
 import tempfile
-from pathlib import Path
+from contextlib import asynccontextmanager
 from functools import lru_cache
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
@@ -28,16 +28,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    init_db()
+    yield
+
+
 app = FastAPI(
     title="AI Research Assistant API",
     version="2.1.0",
     description="Modular monolith API for document-grounded research assistance.",
+    lifespan=lifespan,
 )
-
-
-@app.on_event("startup")
-def startup() -> None:
-    init_db()
 
 
 def get_db():
@@ -71,12 +74,13 @@ def health_check() -> HealthResponse:
 def list_documents() -> DocumentListResponse:
     directory = settings.rag_samples_dir
     directory.mkdir(parents=True, exist_ok=True)
-    files = sorted(
-        p.name
-        for p in directory.iterdir()
-        if p.is_file() and p.suffix.lower() in {".pdf", ".md", ".txt"}
+
+    documents = sorted(
+        path.name
+        for path in directory.iterdir()
+        if path.is_file() and path.suffix.lower() in {".pdf", ".md", ".txt"}
     )
-    return DocumentListResponse(documents=files)
+    return DocumentListResponse(documents=documents)
 
 
 @app.post(
@@ -104,6 +108,7 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
 
     temp_path: Path | None = None
     total = 0
+
     try:
         with tempfile.NamedTemporaryFile(
             mode="wb",
@@ -113,17 +118,22 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
             delete=False,
         ) as temp:
             temp_path = Path(temp.name)
+
             while chunk := await file.read(1024 * 1024):
                 total += len(chunk)
                 if total > max_bytes:
                     raise HTTPException(
                         status_code=413,
-                        detail=f"File exceeds MAX_UPLOAD_MB={settings.max_upload_mb}.",
+                        detail=(
+                            f"File exceeds MAX_UPLOAD_MB="
+                            f"{settings.max_upload_mb}."
+                        ),
                     )
                 temp.write(chunk)
 
         temp_path.replace(destination)
         return UploadResponse(status="ok", filename=filename)
+
     except HTTPException:
         raise
     except OSError as exc:
@@ -135,7 +145,10 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
             try:
                 temp_path.unlink()
             except OSError:
-                logger.warning("Could not clean temporary upload file %s.", temp_path)
+                logger.warning(
+                    "Could not clean temporary upload file %s.",
+                    temp_path,
+                )
 
 
 @app.post(
@@ -143,7 +156,9 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
     response_model=IndexResponse,
     tags=["documents"],
 )
-def index_documents(rag: SimpleRAGPipeline = Depends(get_rag)) -> IndexResponse:
+def index_documents(
+    rag: SimpleRAGPipeline = Depends(get_rag),
+) -> IndexResponse:
     try:
         result = rag.index_documents()
         outcome = "ok" if result["failed"] == 0 else "partial"
@@ -154,7 +169,10 @@ def index_documents(rag: SimpleRAGPipeline = Depends(get_rag)) -> IndexResponse:
         )
     except Exception as exc:
         logger.exception("Document indexing failed.")
-        raise HTTPException(status_code=500, detail="Document indexing failed.") from exc
+        raise HTTPException(
+            status_code=500,
+            detail="Document indexing failed.",
+        ) from exc
 
 
 @app.post(
@@ -169,10 +187,18 @@ def chat_endpoint(
 ) -> QueryResponse:
     try:
         result = agent.run(request.query)
-        db.add(ChatMessage(query=request.query, answer=result["answer"]))
+        db.add(
+            ChatMessage(
+                query=request.query,
+                answer=result["answer"],
+            )
+        )
         db.commit()
         return QueryResponse.model_validate(result)
     except Exception as exc:
         db.rollback()
         logger.exception("Chat request failed.")
-        raise HTTPException(status_code=500, detail="Chat request failed.") from exc
+        raise HTTPException(
+            status_code=500,
+            detail="Chat request failed.",
+        ) from exc
