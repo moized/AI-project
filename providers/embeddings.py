@@ -39,9 +39,17 @@ class LocalSentenceTransformerEmbeddingProvider:
     model_name = "BAAI/bge-small-en-v1.5"
     dimension = 384
 
-    def __init__(self) -> None:
-        from sentence_transformers import SentenceTransformer
-        self.model = SentenceTransformer(self.model_name)
+    def __init__(self, model_name: str | None = None) -> None:
+        self.model_name = model_name or settings.local_embedding_model
+        self.dimension = settings.local_embedding_dimension
+        self._model = None
+
+    @property
+    def model(self):
+        if self._model is None:
+            from sentence_transformers import SentenceTransformer
+            self._model = SentenceTransformer(self.model_name)
+        return self._model
 
     def embed_documents(self, documents: Sequence[tuple[str, str]]) -> list[list[float]]:
         texts = [f"title: {title} | text: {text}" for title, text in documents]
