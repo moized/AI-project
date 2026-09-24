@@ -143,6 +143,8 @@ class Settings:
                 "DATABASE_URL",
                 "sqlite:///./runtime/research_assistant.db",
             ),
+            index_on_startup=_env_bool("INDEX_ON_STARTUP", False),
+            backend_access_token=os.getenv("BACKEND_ACCESS_TOKEN") or None,
             max_upload_mb=_env_int("MAX_UPLOAD_MB", 25, 1),
             max_tool_rounds=_env_int("MAX_TOOL_ROUNDS", 3, 1),
             log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
