@@ -1,11 +1,21 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 
 from sqlalchemy import DateTime, Integer, String, Text, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 from core.config import settings
+
+
+if settings.database_url.startswith("sqlite:///"):
+    sqlite_target = settings.database_url.removeprefix("sqlite:///")
+    if sqlite_target != ":memory:":
+        Path(sqlite_target).expanduser().resolve().parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
 
 
 class Base(DeclarativeBase):
@@ -14,9 +24,17 @@ class Base(DeclarativeBase):
 
 engine = create_engine(
     settings.database_url,
-    connect_args={"check_same_thread": False} if settings.database_url.startswith("sqlite") else {},
+    connect_args=(
+        {"check_same_thread": False}
+        if settings.database_url.startswith("sqlite")
+        else {}
+    ),
 )
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+SessionLocal = sessionmaker(
+    bind=engine,
+    autoflush=False,
+    autocommit=False,
+)
 
 
 class ChatMessage(Base):
