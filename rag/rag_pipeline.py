@@ -6,7 +6,7 @@ import logging
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from pypdf import PdfReader
 from qdrant_client import QdrantClient
@@ -43,7 +43,9 @@ class SearchResult:
 class SimpleRAGPipeline:
     """Document ingestion and retrieval with replaceable embeddings and local Qdrant."""
 
-    SUPPORTED_EXTENSIONS = {".pdf", ".md", ".txt"}
+    SUPPORTED_EXTENSIONS: ClassVar[frozenset[str]] = frozenset(
+        {".pdf", ".md", ".txt"}
+    )
 
     def __init__(
         self,
@@ -55,8 +57,6 @@ class SimpleRAGPipeline:
         self.collection_name = settings.rag_collection_name
         self.chunk_size = settings.rag_chunk_size
         self.chunk_overlap = settings.rag_chunk_overlap
-        self.embedding_model = settings.gemini_embedding_model
-        self.embedding_dimension = settings.gemini_embedding_dimension
 
         if embedding_provider is not None:
             self.embedding_provider = embedding_provider
@@ -91,7 +91,11 @@ class SimpleRAGPipeline:
 
         info = self.qdrant.get_collection(self.collection_name)
         vectors = info.config.params.vectors
-        size = next(iter(vectors.values())).size if isinstance(vectors, dict) else vectors.size
+        size = (
+            next(iter(vectors.values())).size
+            if isinstance(vectors, dict)
+            else vectors.size
+        )
 
         if size != dimension:
             raise RuntimeError(
@@ -250,14 +254,19 @@ class SimpleRAGPipeline:
                 "chunk_overlap": self.chunk_overlap,
             }
 
-            if old and all(old.get(key) == value for key, value in signature.items()):
+            if old and all(
+                old.get(key) == value for key, value in signature.items()
+            ):
                 metrics["unchanged"] += 1
                 continue
 
             try:
                 chunks = self._build_chunks(path)
                 if not chunks:
-                    logger.warning("Empty or unextractable document: %s", path.name)
+                    logger.warning(
+                        "Empty or unextractable document: %s",
+                        path.name,
+                    )
                     metrics["failed"] += 1
                     continue
 
@@ -288,8 +297,6 @@ class SimpleRAGPipeline:
                 old_ids = set(old.get("point_ids", [])) if old else set()
                 stale_ids = list(old_ids - new_ids)
 
-                # Upsert the new version first. Delete only points that do not
-                # belong to the new version, so shared unchanged chunks survive.
                 self.qdrant.upsert(
                     collection_name=self.collection_name,
                     points=points,
