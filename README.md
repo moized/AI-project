@@ -80,6 +80,8 @@ Docker is optional for the free cloud deployment below.
 
 The repository includes a native Render Blueprint at render.yaml for the FastAPI backend. It uses Render's free web-service plan, the Python 3.11 runtime, the /ready health check, Gemini Embedding 2 at 768 dimensions to avoid the memory-heavy local ONNX embedding runtime, and INDEX_ON_STARTUP=true so bundled sample documents can rebuild the local demo index after a restart. Render free services have ephemeral filesystems and can spin down after 15 minutes of inactivity, so uploaded documents, SQLite data, and the local Qdrant index are not intended to be permanent on the free demo deployment.
 
+The Streamlit frontend automatically retries the Render `/health` endpoint during cold starts for about 2–3 minutes, so a sleeping free backend does not normally require a manual page refresh. Normal API calls use a longer connection/read timeout. The agent also filters weak, unrelated retrieval results before adding document evidence or citations to an answer.
+
 The Streamlit frontend can be deployed separately on Streamlit Community Cloud. Set these Streamlit secrets:
 
     BACKEND_URL = "https://YOUR-RENDER-SERVICE.onrender.com"
