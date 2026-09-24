@@ -1,17 +1,25 @@
 {
-  "description": "RAG Katmanı Sorgu ve Yanıt Sözleşmesi",
-  "query_structure": {
-    "query": "string",
-    "top_k": "integer"
+  "version": "1.0",
+  "purpose": "Black-box contract for document indexing and retrieval.",
+  "index_documents": {
+    "input": "No direct input; reads supported files from RAG_SAMPLES_DIR.",
+    "output": {"indexed": "integer", "unchanged": "integer", "failed": "integer", "chunks": "integer"}
   },
-  "response_structure": {
-    "chunks": [
-      {
-        "id": "string",
-        "text": "string",
-        "source": "string",
-        "score": "float"
-      }
+  "retrieve": {
+    "input": {"query": "string", "top_k": "integer|null"},
+    "output": [{"id": "string", "text": "string", "source": "string", "page": "integer|null", "score": "float"}],
+    "guarantees": [
+      "Empty queries return an empty list.",
+      "Returned vectors use one consistent configured dimension.",
+      "Results below RAG_MIN_RETRIEVAL_SCORE are filtered."
     ]
+  },
+  "providers": {
+    "embedding_provider": "replaceable",
+    "default": "local",
+    "local_model": "intfloat/multilingual-e5-small",
+    "local_dimension": 384,
+    "gemini_model": "gemini-embedding-2",
+    "gemini_dimension": 768
   }
 }
