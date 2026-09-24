@@ -51,9 +51,10 @@ class SimpleRAGPipeline:
         self,
         samples_dir: str | Path | None = None,
         embedding_provider: EmbeddingProvider | None = None,
+        qdrant_path: str | Path | None = None,
     ) -> None:
         self.samples_dir = Path(samples_dir or settings.rag_samples_dir)
-        self.qdrant_path = settings.qdrant_path
+        self.qdrant_path = Path(qdrant_path or settings.qdrant_path)
         self.collection_name = settings.rag_collection_name
         self.chunk_size = settings.rag_chunk_size
         self.chunk_overlap = settings.rag_chunk_overlap
