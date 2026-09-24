@@ -19,7 +19,10 @@ REQUEST_TIMEOUT = (5, 180)
 @st.cache_data(ttl=5)
 def get_backend_status() -> bool:
     try:
-        response = requests.get(f"{BACKEND_URL}/health", timeout=REQUEST_TIMEOUT[0])
+        response = requests.get(
+            f"{BACKEND_URL}/health",
+            timeout=REQUEST_TIMEOUT[0],
+        )
         return response.ok
     except requests.RequestException:
         return False
@@ -69,10 +72,14 @@ def index_documents() -> bool:
         )
         response.raise_for_status()
         result = response.json()
+
         if result.get("status") == "partial":
-            st.warning(f"İndeksleme kısmen tamamlandı: {result.get('result')}")
+            st.warning(
+                f"İndeksleme kısmen tamamlandı: {result.get('result')}"
+            )
         else:
             st.success("Doküman indeksi güncellendi.")
+
         return True
     except requests.HTTPError as exc:
         detail = exc.response.text if exc.response is not None else str(exc)
@@ -84,6 +91,7 @@ def index_documents() -> bool:
 
 def render_documents() -> None:
     st.subheader("📂 Doküman Kütüphanesi")
+
     documents = get_documents()
     if documents:
         for name in documents:
@@ -92,17 +100,25 @@ def render_documents() -> None:
         st.info("Henüz doküman yok.")
 
     st.divider()
+
     uploaded_file = st.file_uploader(
         "PDF, Markdown veya TXT yükleyin",
         type=["pdf", "md", "txt"],
     )
-    if uploaded_file is not None:
-        if st.button("Yükle ve İndeksle", type="primary"):
-            with st.spinner("Doküman yükleniyor..."):
-                if upload_document(uploaded_file):
-                    with st.spinner("RAG indeksi güncelleniyor..."):
-                        if index_documents():
-                            get_documents.clear()
+
+    if uploaded_file is not None and st.button(
+        "Yükle ve İndeksle",
+        type="primary",
+    ):
+        with st.spinner("Doküman yükleniyor..."):
+            uploaded = upload_document(uploaded_file)
+
+        if uploaded:
+            with st.spinner("RAG indeksi güncelleniyor..."):
+                indexed = index_documents()
+
+            if indexed:
+                get_documents.clear()
 
 
 with st.sidebar:
@@ -110,6 +126,7 @@ with st.sidebar:
         st.success("Backend: Çevrimiçi 🟢")
     else:
         st.error("Backend: Bağlı Değil 🔴")
+
     render_documents()
 
 
@@ -122,6 +139,7 @@ if "messages" not in st.session_state:
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
+
         sources = message.get("sources", [])
         if sources:
             with st.expander("📚 Kaynaklar"):
@@ -129,70 +147,83 @@ for message in st.session_state.messages:
                     location = source["source"]
                     if source.get("page"):
                         location += f", sayfa {source['page']}"
-                    st.write(f"- {location} (skor: {source['score']:.3f})")
-        if message.get("tool_calls"):
+                    st.write(
+                        f"- {location} (skor: {source['score']:.3f})"
+                    )
+
+        tool_calls = message.get("tool_calls", [])
+        if tool_calls:
             with st.expander("🛠 Araç çağrıları"):
-                for call in message["tool_calls"]:
-                    st.write(f"- {call['name']}: {call['arguments']}")
+                for call in tool_calls:
+                    st.write(
+                        f"- {call['name']}: {call['arguments']}"
+                    )
 
 
 query = st.chat_input("Bir soru sorun...")
+
 if query:
     query = query.strip()
+
     if not query:
         st.warning("Lütfen geçerli bir soru girin.")
         st.stop()
 
-    st.session_state.messages.append({"role": "user", "content": query})
+    st.session_state.messages.append(
+        {"role": "user", "content": query}
+    )
+
     with st.chat_message("user"):
         st.markdown(query)
 
-    with st.chat_message("assistant"):
-        with st.spinner("Araştırılıyor..."):
-            try:
-                response = requests.post(
-                    f"{BACKEND_URL}/api/v1/chat",
-                    json={"query": query},
-                    timeout=REQUEST_TIMEOUT,
-                )
-                response.raise_for_status()
-                data = response.json()
-                answer = data["answer"]
+    with st.chat_message("assistant"), st.spinner("Araştırılıyor..."):
+        try:
+            response = requests.post(
+                f"{BACKEND_URL}/api/v1/chat",
+                json={"query": query},
+                timeout=REQUEST_TIMEOUT,
+            )
+            response.raise_for_status()
 
-                st.markdown(answer)
+            data = response.json()
+            answer = data["answer"]
+            sources = data.get("sources", [])
+            tool_calls = data.get("tool_calls", [])
 
-                sources = data.get("sources", [])
-                if sources:
-                    with st.expander("📚 Kaynaklar"):
-                        for source in sources:
-                            location = source["source"]
-                            if source.get("page"):
-                                location += f", sayfa {source['page']}"
-                            st.write(
-                                f"- {location} (skor: {source['score']:.3f})"
-                            )
+            st.markdown(answer)
 
-                tool_calls = data.get("tool_calls", [])
-                if tool_calls:
-                    with st.expander("🛠 Araç çağrıları"):
-                        for call in tool_calls:
-                            st.write(f"- {call['name']}: {call['arguments']}")
+            if sources:
+                with st.expander("📚 Kaynaklar"):
+                    for source in sources:
+                        location = source["source"]
+                        if source.get("page"):
+                            location += f", sayfa {source['page']}"
+                        st.write(
+                            f"- {location} (skor: {source['score']:.3f})"
+                        )
 
-                st.session_state.messages.append(
-                    {
-                        "role": "assistant",
-                        "content": answer,
-                        "sources": sources,
-                        "tool_calls": tool_calls,
-                    }
-                )
+            if tool_calls:
+                with st.expander("🛠 Araç çağrıları"):
+                    for call in tool_calls:
+                        st.write(
+                            f"- {call['name']}: {call['arguments']}"
+                        )
 
-            except requests.HTTPError as exc:
-                detail = exc.response.text if exc.response is not None else str(exc)
-                st.error(f"Sunucu hatası: {detail}")
-            except requests.Timeout:
-                st.error("Backend isteği zaman aşımına uğradı.")
-            except requests.RequestException as exc:
-                st.error(f"Backend bağlantı hatası: {exc}")
-            except ValueError:
-                st.error("Backend geçersiz JSON döndürdü.")
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": answer,
+                    "sources": sources,
+                    "tool_calls": tool_calls,
+                }
+            )
+
+        except requests.HTTPError as exc:
+            detail = exc.response.text if exc.response is not None else str(exc)
+            st.error(f"Sunucu hatası: {detail}")
+        except requests.Timeout:
+            st.error("Backend isteği zaman aşımına uğradı.")
+        except requests.RequestException as exc:
+            st.error(f"Backend bağlantı hatası: {exc}")
+        except ValueError:
+            st.error("Backend geçersiz JSON döndürdü.")
