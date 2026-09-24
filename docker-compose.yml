@@ -1,12 +1,44 @@
-version: '3.8'
-
 services:
-  app:
+  backend:
     build: .
+    env_file:
+      - .env
+    environment:
+      RAG_SAMPLES_DIR: /app/data/samples
+      QDRANT_PATH: /app/qdrant_storage
+      DATABASE_URL: sqlite:////app/runtime/research_assistant.db
+      HF_HOME: /home/app/.cache/huggingface
+    command: ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
     ports:
       - "8000:8000"
-      - "8501:8501"
     volumes:
-      - .:/app
+      - ./data/samples:/app/data/samples
+      - qdrant_data:/app/qdrant_storage
+      - runtime_data:/app/runtime
+      - huggingface_cache:/home/app/.cache/huggingface
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  frontend:
+    build: .
+    env_file:
+      - .env
     environment:
-      - PORT=8000
+      BACKEND_URL: http://backend:8000
+    command: ["streamlit", "run", "frontend/app.py", "--server.address=0.0.0.0", "--server.port=8501"]
+    ports:
+      - "8501:8501"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  qdrant_data:
+  runtime_data:
+  huggingface_cache:
