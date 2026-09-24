@@ -16,7 +16,7 @@ from core.config import settings
 from providers.embeddings import (
     EmbeddingProvider,
     GeminiEmbeddingProvider,
-    LocalSentenceTransformerEmbeddingProvider,
+    LocalFastEmbedProvider,
 )
 
 logger = logging.getLogger(__name__)
@@ -61,7 +61,7 @@ class SimpleRAGPipeline:
         if embedding_provider is not None:
             self.embedding_provider = embedding_provider
         elif settings.embedding_provider == "local":
-            self.embedding_provider = LocalSentenceTransformerEmbeddingProvider()
+            self.embedding_provider = LocalFastEmbedProvider()
         elif settings.embedding_provider == "gemini":
             self.embedding_provider = GeminiEmbeddingProvider()
         else:
