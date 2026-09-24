@@ -3,8 +3,9 @@ from __future__ import annotations
 import hashlib
 import logging
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Protocol, Sequence
+from typing import Protocol
 
 from google import genai
 from google.genai import types
