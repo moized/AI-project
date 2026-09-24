@@ -11,7 +11,19 @@ def test_health():
     assert response.json() == {"status": "ok"}
 
 
-def test_ready():
+def test_ready(monkeypatch):
+    class FakeQdrant:
+        def get_collections(self):
+            return object()
+
+    class FakeRag:
+        qdrant = FakeQdrant()
+
+    monkeypatch.setattr(
+        "backend.main.get_rag",
+        lambda: FakeRag(),
+    )
+
     response = client.get("/ready")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
