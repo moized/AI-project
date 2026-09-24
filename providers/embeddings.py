@@ -46,7 +46,14 @@ class LocalSentenceTransformerEmbeddingProvider:
     def model(self):
         if self._model is None:
             from sentence_transformers import SentenceTransformer
+
             self._model = SentenceTransformer(self.model_name)
+            actual_dimension = self._model.get_sentence_embedding_dimension()
+            if actual_dimension != self.dimension:
+                raise RuntimeError(
+                    f"Configured local embedding dimension is {self.dimension}, "
+                    f"but model reports {actual_dimension}."
+                )
         return self._model
 
     def embed_documents(
@@ -74,11 +81,7 @@ class LocalSentenceTransformerEmbeddingProvider:
 
 
 class GeminiEmbeddingProvider:
-    """Gemini Embedding 2 adapter.
-
-    Embeddings 2 does not accept the old task_type parameter. For text-only
-    retrieval, Google recommends task instructions in the input text.
-    """
+    """Gemini Embedding 2 adapter."""
 
     def __init__(
         self,
@@ -138,6 +141,7 @@ class GeminiEmbeddingProvider:
                         )
 
                 return vectors
+
             except Exception as exc:
                 message = str(exc).lower()
                 transient = any(
@@ -151,6 +155,7 @@ class GeminiEmbeddingProvider:
                         "deadline",
                     )
                 )
+
                 if not transient or attempt >= self.max_retries:
                     logger.exception("Embedding request failed.")
                     raise
@@ -216,9 +221,11 @@ class DeterministicEmbeddingProvider:
         for token in text.lower().replace("\n", " ").split():
             index = int(hashlib.sha256(token.encode()).hexdigest(), 16) % self.dimension
             vector[index] += 1.0
+
         magnitude = sum(value * value for value in vector) ** 0.5
         if magnitude:
             vector = [value / magnitude for value in vector]
+
         return vector
 
     def embed_documents(
