@@ -10,7 +10,10 @@ def build_agent():
         embedding_provider=DeterministicEmbeddingProvider(),
     )
     rag.index_documents()
-    return ResearchAgent(rag=rag, llm=FakeLLMProvider("Test response."))
+    return ResearchAgent(
+        rag=rag,
+        llm=FakeLLMProvider("Test response."),
+    )
 
 
 def test_agent_returns_contract():
