@@ -12,7 +12,25 @@ st.set_page_config(
     layout="wide",
 )
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
+BACKEND_URL = os.getenv("BACKEND_URL")
+if not BACKEND_URL:
+    try:
+        BACKEND_URL = st.secrets.get("BACKEND_URL")
+    except Exception:
+        BACKEND_URL = None
+BACKEND_URL = (BACKEND_URL or "http://localhost:8000").rstrip("/")
+
+try:
+    BACKEND_ACCESS_TOKEN = st.secrets.get("BACKEND_ACCESS_TOKEN")
+except Exception:
+    BACKEND_ACCESS_TOKEN = None
+
+BACKEND_HEADERS = (
+    {"X-Backend-Token": BACKEND_ACCESS_TOKEN}
+    if BACKEND_ACCESS_TOKEN
+    else {}
+)
+
 REQUEST_TIMEOUT = (5, 180)
 
 
@@ -21,6 +39,7 @@ def get_backend_status() -> bool:
     try:
         response = requests.get(
             f"{BACKEND_URL}/health",
+            headers=BACKEND_HEADERS,
             timeout=REQUEST_TIMEOUT[0],
         )
         return response.ok
@@ -33,6 +52,7 @@ def get_documents() -> list[str]:
     try:
         response = requests.get(
             f"{BACKEND_URL}/api/v1/documents",
+            headers=BACKEND_HEADERS,
             timeout=REQUEST_TIMEOUT[0],
         )
         response.raise_for_status()
@@ -46,6 +66,7 @@ def upload_document(uploaded_file) -> bool:
     try:
         response = requests.post(
             f"{BACKEND_URL}/api/v1/documents/upload",
+            headers=BACKEND_HEADERS,
             files={
                 "file": (
                     uploaded_file.name,
@@ -69,6 +90,7 @@ def index_documents() -> bool:
     try:
         response = requests.post(
             f"{BACKEND_URL}/api/v1/documents/index",
+            headers=BACKEND_HEADERS,
             timeout=REQUEST_TIMEOUT,
         )
         response.raise_for_status()
@@ -181,6 +203,7 @@ if query:
         try:
             response = requests.post(
                 f"{BACKEND_URL}/api/v1/chat",
+                headers=BACKEND_HEADERS,
                 json={"query": query},
                 timeout=REQUEST_TIMEOUT,
             )
