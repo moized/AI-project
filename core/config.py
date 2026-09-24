@@ -73,8 +73,8 @@ class Settings:
                 128,
             ),
             local_embedding_model=os.getenv(
+                "LOCAL_EMBEDDING_MODEL",
                 "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
-                "intfloat/multilingual-e5-small",
             ),
             local_embedding_dimension=_env_int(
                 "LOCAL_EMBEDDING_DIMENSION",
