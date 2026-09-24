@@ -1,5 +1,9 @@
 from fastapi.testclient import TestClient
+from backend.database import Base, engine
 from backend.main import app
+
+# Ensure SQLite tables exist before tests run
+Base.metadata.create_all(bind=engine)
 
 client = TestClient(app)
 

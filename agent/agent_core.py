@@ -1,101 +1,202 @@
+from __future__ import annotations
+
 import os
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
+from dotenv import load_dotenv
 from google import genai
+
 from rag.rag_pipeline import SimpleRAGPipeline
 from tools.tool_implementation import TOOL_FUNCTIONS
+
+load_dotenv()
+
 
 class ResearchAgent:
     def __init__(self):
         self.rag = SimpleRAGPipeline()
         self.tools = TOOL_FUNCTIONS
-        
-        # Google GenAI API yapılandırması (google-genai paketi ve güncel rehberlik)
+
         api_key = os.getenv("GEMINI_API_KEY")
-        self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-        if api_key:
-            self.client = genai.Client(api_key=api_key)
-        else:
-            self.client = None
+
+        self.model_name = os.getenv(
+            "GEMINI_MODEL",
+            "gemini-3.5-flash-lite",
+        )
+
+        self.client = genai.Client(api_key=api_key) if api_key else None
 
     def run(self, query: str) -> Dict[str, Any]:
-        """Ajanın sorguyu işleme, araçları kullanma, RAG'den bilgi getirme ve Google GenAI ile yanıt üretme döngüsü."""
-        response = {
+        response: Dict[str, Any] = {
             "query": query,
             "answer": "",
             "sources": [],
-            "tool_output": None
+            "tool_output": None,
         }
 
-        query_lower = query.lower().strip()
+        query = query.strip()
 
-        # Esnek selamlama ve yardım talebi kontrolü
-        greetings = ["merhaba", "selam", "hello", "hi", "hey", "nasılsın", "günaydın", "iyi günler"]
-        if any(g in query_lower for g in greetings) or "nasıl yardımcı" in query_lower:
-            response["answer"] = "Merhaba! Ben AI Araştırma Asistanıyım. Size yüklediğiniz dokümanlar hakkında yardımcı olabilir, hesaplama yapabilir veya güncel tarihi söyleyebilirim. Nasıl yardımcı olabilirim?"
+        if not query:
+            response["answer"] = "Lütfen bir soru veya araştırma konusu girin."
             return response
 
-        # 1. Basit Araç Tetikleme Kontrolü (tarih veya hesaplama)
+        query_lower = query.lower()
+
+        # --------------------------------------------------------------
+        # Simple deterministic tools
+        # --------------------------------------------------------------
+
+        greetings = {
+            "merhaba",
+            "selam",
+            "hello",
+            "hi",
+            "hey",
+            "nasılsın",
+            "günaydın",
+            "iyi günler",
+        }
+
+        if query_lower in greetings:
+            response["answer"] = (
+                "Merhaba! AI Research Assistant olarak "
+                "dokümanlarınızı araştırmanıza yardımcı olabilirim."
+            )
+            return response
+
         if "tarih" in query_lower:
             date_func = self.tools.get("get_current_date")
+
             if date_func:
-                res = date_func()
-                response["tool_output"] = f"Mevcut tarih: {res}"
-                response["answer"] = f"Tarih bilgisi alındı: {res}"
+                result = date_func()
+                response["tool_output"] = result
+                response["answer"] = f"Mevcut tarih: {result}"
                 return response
 
         if any(op in query for op in ["+", "-", "*", "/"]):
             calc_func = self.tools.get("calculator")
-            if calc_func:
-                words = query.split()
-                for word in words:
-                    if any(c.isdigit() for c in word) and any(op in word for op in ["+", "-", "*", "/"]):
-                        res = calc_func(word)
-                        response["tool_output"] = res
-                        response["answer"] = f"Hesaplama sonucu: {res}"
-                        return response
 
-        # 2. RAG ile Bilgi Getirme (Retrieval) - Kara Kutu Olarak Kullanım
-        retrieved_chunks = self.rag.retrieve(query, top_k=3)
-        sources = []
-        context_texts = []
+            if calc_func:
+                for word in query.split():
+                    if (
+                        any(character.isdigit() for character in word)
+                        and any(op in word for op in ["+", "-", "*", "/"])
+                    ):
+                        try:
+                            result = calc_func(word)
+
+                            response["tool_output"] = result
+                            response["answer"] = (
+                                f"Hesaplama sonucu: {result}"
+                            )
+                            return response
+                        except Exception:
+                            pass
+
+        # --------------------------------------------------------------
+        # RAG
+        # --------------------------------------------------------------
+
+        retrieved_chunks = self.rag.retrieve(
+            query,
+            top_k=5,
+        )
+
+        sources: List[Dict[str, Any]] = []
+        context_parts: List[str] = []
 
         for chunk in retrieved_chunks:
-            sources.append({
-                "id": chunk["id"],
-                "source": chunk["source"],
-                "score": chunk["score"]
-            })
-            context_texts.append(chunk["text"])
+            source = chunk.get("source", "unknown")
+            page = chunk.get("page")
+
+            citation = (
+                f"[{source}, sayfa {page}]"
+                if page
+                else f"[{source}]"
+            )
+
+            sources.append(
+                {
+                    "id": chunk.get("id"),
+                    "source": source,
+                    "page": page,
+                    "score": chunk.get("score"),
+                }
+            )
+
+            context_parts.append(
+                f"{citation}\n{chunk.get('text', '')}"
+            )
 
         response["sources"] = sources
 
-        # 3. Google GenAI Entegrasyonu ile Yanıt Üretimi
-        context_str = "\n\n".join(context_texts) if context_texts else "İlgili doküman bulunamadı."
-        
-        prompt = f"""Sen profesyonel bir AI Araştırma Asistanısın. Kullanıcının sorusunu aşağıda sağlanan doküman bağlamını kullanarak yanıtla. Eğer bağlamda yeterli bilgi yoksa, genel bilginle ancak dürüstçe yardımcı ol.
+        context_text = "\n\n".join(context_parts)
 
-Bağlam:
-{context_str}
+        # --------------------------------------------------------------
+        # Gemini
+        # --------------------------------------------------------------
 
-Kullanıcı Sorusu: {query}
-Yanıt:"""
+        if not self.client:
+            response["answer"] = (
+                "Gemini API anahtarı yapılandırılmamış. "
+                "Projenin .env dosyasında GEMINI_API_KEY tanımlayın."
+            )
+            return response
 
-        if self.client:
-            try:
-                gemini_response = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=prompt,
-                )
-                response["answer"] = gemini_response.text
-            except Exception as e:
-                if context_texts:
-                    response["answer"] = f"[LLM Hatası: {str(e)}] Bulunan doküman özeti:\n{context_str[:500]}"
-                else:
-                    response["answer"] = f"Google GenAI API hatası oluştu ve eşleşen doküman bulunamadı: {str(e)}"
+        if context_text:
+            prompt = f"""
+You are an AI Research Assistant.
+
+Answer the user's question using the retrieved document context below.
+
+Rules:
+- Prefer the provided documents over unsupported assumptions.
+- If the documents do not contain enough information, say so clearly.
+- Do not invent sources or facts.
+- When making a claim based on a document, refer to its source label.
+- Give a concise but useful answer.
+- Answer in the same language as the user.
+
+Retrieved context:
+
+{context_text}
+
+User question:
+
+{query}
+"""
         else:
-            if context_texts:
-                response["answer"] = f"[GEMINI_API_KEY tanımlı değil, RAG Özeti] {context_str[:600]}..."
-            else:
-                response["answer"] = f"'{query}' ile ilgili eşleşen bir doküman bulamadım. Lütfen geçerli bir anahtar kelime girin veya doküman yükleyin."
+            prompt = f"""
+You are an AI Research Assistant.
+
+No relevant document passages were retrieved for this question.
+
+Tell the user clearly that the available documents do not contain enough
+relevant information.
+
+Do not invent document sources.
+
+User question:
+
+{query}
+"""
+
+        try:
+            gemini_response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+            )
+
+            response["answer"] = (
+                gemini_response.text
+                if gemini_response.text
+                else "Model boş bir yanıt döndürdü."
+            )
+
+        except Exception as exc:
+            response["answer"] = (
+                "Gemini API çağrısı sırasında bir hata oluştu. "
+                f"Hata: {exc}"
+            )
 
         return response
