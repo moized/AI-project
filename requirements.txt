@@ -4,9 +4,12 @@ sqlalchemy
 pydantic
 requests
 streamlit
-google-genai
+google-genai>=2.25.0,<3
 pypdf
 qdrant-client
 python-dotenv
+python-multipart
+sentence-transformers
 pytest
 httpx
+ruff
