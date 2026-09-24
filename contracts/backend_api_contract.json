@@ -2,6 +2,7 @@
   "version": "1.0",
   "base": "/api/v1",
   "endpoints": {
+    "GET /ready": {"response":{"status":"ok"}},
     "GET /documents": {
       "purpose": "List supported uploaded documents.",
       "response": {"documents": ["string"]}
