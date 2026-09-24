@@ -7,6 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
+from qdrant_client import QdrantClient
 from sqlalchemy.orm import Session
 
 from agent.agent_core import ResearchAgent
@@ -72,8 +73,10 @@ def readiness_check() -> HealthResponse:
     """Readiness probe for the database and local vector store."""
     try:
         init_db()
-        rag = get_rag()
-        rag.qdrant.get_collection(rag.collection_name)
+        settings.qdrant_path.mkdir(parents=True, exist_ok=True)
+        qdrant = QdrantClient(path=str(settings.qdrant_path))
+        qdrant.get_collections()
+        qdrant.close()
         return HealthResponse(status="ok")
     except Exception as exc:
         logger.exception("Readiness check failed.")
