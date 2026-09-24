@@ -5,6 +5,5 @@ pydantic
 google-genai>=2.25.0,<3
 pypdf
 qdrant-client
-fastembed==0.8.1
 python-dotenv
 python-multipart
