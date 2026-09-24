@@ -35,9 +35,7 @@ class EmbeddingRequest:
 
 
 class LocalSentenceTransformerEmbeddingProvider:
-    """Free local embedding provider; no API quota or network call at runtime."""
-    model_name = "BAAI/bge-small-en-v1.5"
-    dimension = 384
+    """Free local multilingual retrieval embeddings."""
 
     def __init__(self, model_name: str | None = None) -> None:
         self.model_name = model_name or settings.local_embedding_model
@@ -51,15 +49,26 @@ class LocalSentenceTransformerEmbeddingProvider:
             self._model = SentenceTransformer(self.model_name)
         return self._model
 
-    def embed_documents(self, documents: Sequence[tuple[str, str]]) -> list[list[float]]:
-        texts = [f"title: {title} | text: {text}" for title, text in documents]
-        vectors = self.model.encode(texts, normalize_embeddings=True)
+    def embed_documents(
+        self,
+        documents: Sequence[tuple[str, str]],
+    ) -> list[list[float]]:
+        texts = [
+            f"passage: title: {title} | text: {text}"
+            for title, text in documents
+        ]
+        vectors = self.model.encode(
+            texts,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+        )
         return vectors.tolist()
 
     def embed_queries(self, queries: Sequence[str]) -> list[list[float]]:
         vectors = self.model.encode(
-            [f"Represent this sentence for searching relevant passages: {query}" for query in queries],
+            [f"query: {query}" for query in queries],
             normalize_embeddings=True,
+            show_progress_bar=False,
         )
         return vectors.tolist()
 
@@ -67,8 +76,8 @@ class LocalSentenceTransformerEmbeddingProvider:
 class GeminiEmbeddingProvider:
     """Gemini Embedding 2 adapter.
 
-    Embeddings 2 does not accept the old task_type parameter. For retrieval,
-    task instructions are included in the text prompt instead.
+    Embeddings 2 does not accept the old task_type parameter. For text-only
+    retrieval, Google recommends task instructions in the input text.
     """
 
     def __init__(
@@ -96,7 +105,10 @@ class GeminiEmbeddingProvider:
     def _query_text(query: str) -> str:
         return f"task: question answering | query: {query.strip()}"
 
-    def _embed_batch(self, contents: Sequence[types.Content]) -> list[list[float]]:
+    def _embed_batch(
+        self,
+        contents: Sequence[types.Content],
+    ) -> list[list[float]]:
         if not self.client:
             raise RuntimeError(
                 "GEMINI_API_KEY is not configured; embedding generation is unavailable."
@@ -115,8 +127,7 @@ class GeminiEmbeddingProvider:
 
                 if len(vectors) != len(contents):
                     raise RuntimeError(
-                        "Embedding provider returned a different number of vectors "
-                        f"({len(vectors)}) than inputs ({len(contents)})."
+                        "Embedding provider returned a different number of vectors."
                     )
 
                 for vector in vectors:
@@ -127,7 +138,6 @@ class GeminiEmbeddingProvider:
                         )
 
                 return vectors
-
             except Exception as exc:
                 message = str(exc).lower()
                 transient = any(
@@ -141,7 +151,6 @@ class GeminiEmbeddingProvider:
                         "deadline",
                     )
                 )
-
                 if not transient or attempt >= self.max_retries:
                     logger.exception("Embedding request failed.")
                     raise
@@ -164,8 +173,7 @@ class GeminiEmbeddingProvider:
         self,
         documents: Sequence[tuple[str, str]],
     ) -> list[list[float]]:
-        all_vectors: list[list[float]] = []
-
+        vectors: list[list[float]] = []
         for start in range(0, len(documents), self.batch_size):
             batch = documents[start : start + self.batch_size]
             contents = [
@@ -179,13 +187,11 @@ class GeminiEmbeddingProvider:
                 )
                 for title, text in batch
             ]
-            all_vectors.extend(self._embed_batch(contents))
-
-        return all_vectors
+            vectors.extend(self._embed_batch(contents))
+        return vectors
 
     def embed_queries(self, queries: Sequence[str]) -> list[list[float]]:
-        all_vectors: list[list[float]] = []
-
+        vectors: list[list[float]] = []
         for start in range(0, len(queries), self.batch_size):
             batch = queries[start : start + self.batch_size]
             contents = [
@@ -195,24 +201,21 @@ class GeminiEmbeddingProvider:
                 )
                 for query in batch
             ]
-            all_vectors.extend(self._embed_batch(contents))
-
-        return all_vectors
+            vectors.extend(self._embed_batch(contents))
+        return vectors
 
 
 class DeterministicEmbeddingProvider:
-    """Small offline provider used only for tests and local contract checks."""
+    """Small offline provider used only for tests and contract checks."""
 
     dimension = 64
     model_name = "deterministic-test-v1"
 
     def _vector(self, text: str) -> list[float]:
         vector = [0.0] * self.dimension
-        normalized = text.lower()
-        for token in normalized.replace("\n", " ").split():
+        for token in text.lower().replace("\n", " ").split():
             index = int(hashlib.sha256(token.encode()).hexdigest(), 16) % self.dimension
             vector[index] += 1.0
-
         magnitude = sum(value * value for value in vector) ** 0.5
         if magnitude:
             vector = [value / magnitude for value in vector]
