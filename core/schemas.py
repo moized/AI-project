@@ -7,7 +7,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class Source(BaseModel):
     model_config = ConfigDict(extra="forbid")
-
     id: str
     source: str
     page: int | None = None
@@ -16,7 +15,6 @@ class Source(BaseModel):
 
 class ToolCallRecord(BaseModel):
     model_config = ConfigDict(extra="forbid")
-
     name: str
     arguments: dict[str, Any] = Field(default_factory=dict)
     result: Any = None
@@ -24,13 +22,11 @@ class ToolCallRecord(BaseModel):
 
 class QueryRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-
     query: str = Field(min_length=1, max_length=8000)
 
 
 class QueryResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
-
     query: str
     answer: str
     sources: list[Source] = Field(default_factory=list)
@@ -38,16 +34,23 @@ class QueryResponse(BaseModel):
 
 
 class IndexResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     status: str
     message: str
     result: dict[str, int]
 
 
 class UploadResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     status: str
     filename: str
-    result: dict[str, int]
+
+
+class DocumentListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    documents: list[str]
 
 
 class HealthResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     status: str
