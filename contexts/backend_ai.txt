@@ -1,41 +1,39 @@
-# Backend / Database Specialist Context
+# Backend / Database Specialist Context — Current Stage
 
 ## Objective
-Build and maintain a robust, high-performance, and cost-effective backend API and database layer for the AI Research Assistant, serving as the central orchestration point for the frontend, agent, and RAG layers.
+Expose a stable versioned API and persist chat records with minimal infrastructure.
 
-## Responsibility
-- Expose secure and well-documented REST and/or WebSocket APIs (using FastAPI) for frontend interaction and agent execution.
-- Manage database schemas and persistence (using lightweight local databases like SQLite) for metadata, chat history, user sessions, and document references.
-- Integrate smoothly with the completed RAG retrieval module (`rag/rag_pipeline.py`) and the Agent execution loop (`agent/agent_core.py`).
-- Ensure efficient error handling, request validation (Pydantic), and minimal latency.
+## Current stack
+- FastAPI
+- Pydantic v2
+- SQLAlchemy 2
+- SQLite by default
 
-## Inputs
-- API specifications and contracts defined by the Coordinator.
-- Data model requirements and outputs from RAG and Agent layers.
-- User requests forwarded from the Frontend/Deployment layer.
+## API
+Base path: `/api/v1`
 
-## Expected Outputs
-- FastAPI backend application codebase (`backend/`).
-- Database migration/setup scripts and ORM models (SQLAlchemy or SQLModel).
-- API endpoint implementations conforming strictly to established contracts (`contracts/`).
-- Unit and integration tests for all backend routes.
+- GET `/documents`
+- POST `/documents/upload`
+- POST `/documents/index`
+- POST `/chat`
+- GET `/health`
 
-## Constraints
-- **Cost:** Zero or near-zero monetary cost (SQLite or lightweight local database preferred).
-- **Token & Performance Efficiency:** Minimal overhead, asynchronous request handling where appropriate.
-- **Maintainability:** Clear separation of concerns between API routers, database services, and external layer integrations.
+Contract: `contracts/backend_api_contract.json`
 
-## Dependencies
-- Consumes the retrieval interface provided by the RAG specialist (`rag/rag_pipeline.py`).
-- Invokes the core logic of the Agent specialist (`agent/agent_core.py`).
-- Serves requests from the Frontend/Deployment layer.
+## Upload guarantees
+- filename normalized with `Path.name`
+- only .pdf/.md/.txt accepted
+- size checked while streaming
+- upload first goes to a temporary file
+- final replacement is atomic
 
-## Required Deliverables
-- Backend application structure and entry point.
-- Database models and connection management.
-- API routers for chat, document management, and system status.
-- Comprehensive test suite for backend endpoints.
+## Error handling
+Clients receive safe generic 500 messages. Detailed failures are logged server-side.
 
-## What Not To Do
-- Do not implement complex frontend UI components.
-- Do not hardcode internal logic of RAG or Agent layers; rely on their defined interfaces/contracts.
+## Persistence
+SQLite is the default local database. Runtime DB files are ignored by Git.
+
+## Do not
+- move RAG implementation into API code
+- put frontend business logic in FastAPI
+- expose raw exception strings to clients
