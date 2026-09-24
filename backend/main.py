@@ -1,135 +1,70 @@
-from fastapi import FastAPI, Depends, HTTPException
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from typing import List, Any, Dict
+from __future__ import annotations
 
-from backend.database import SessionLocal, init_db, ChatMessage
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import Depends, FastAPI, HTTPException
+from sqlalchemy.orm import Session
+
 from agent.agent_core import ResearchAgent
+from backend.database import ChatMessage, SessionLocal, init_db
+from core.config import settings
+from core.schemas import HealthResponse, IndexResponse, QueryRequest, QueryResponse
+from rag.rag_pipeline import SimpleRAGPipeline
+
+logging.basicConfig(level=settings.log_level)
+
+rag = SimpleRAGPipeline()
+agent = ResearchAgent(rag=rag)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
 
 
 app = FastAPI(
     title="AI Research Assistant API",
-    version="1.0.0",
+    version="2.0.0",
 )
 
 
-# ---------------------------------------------------------------------
-# Startup
-# ---------------------------------------------------------------------
-
-@app.on_event("startup")
-def startup_event():
-    init_db()
-
-
-# ---------------------------------------------------------------------
-# Database
-# ---------------------------------------------------------------------
-
 def get_db():
     db = SessionLocal()
-
     try:
         yield db
-
     finally:
         db.close()
 
 
-# ---------------------------------------------------------------------
-# Agent
-# ---------------------------------------------------------------------
-
-agent = ResearchAgent()
-
-
-# ---------------------------------------------------------------------
-# Schemas
-# ---------------------------------------------------------------------
-
-class QueryRequest(BaseModel):
-    query: str
-
-
-class QueryResponse(BaseModel):
-    query: str
-    answer: str
-    sources: List[Dict[str, Any]]
-    tool_output: Any = None
-
-
-# ---------------------------------------------------------------------
-# Health
-# ---------------------------------------------------------------------
-
-@app.get("/health")
+@app.get("/health", response_model=HealthResponse)
 def health_check():
-    return {
-        "status": "ok"
-    }
+    return {"status": "ok"}
 
 
-# ---------------------------------------------------------------------
-# Document indexing
-# ---------------------------------------------------------------------
-
-@app.post("/documents/index")
+@app.post("/documents/index", response_model=IndexResponse)
 def index_documents():
-    """
-    Index new or changed documents from RAG_SAMPLES_DIR.
-
-    The RAG pipeline uses its manifest and embedding cache,
-    so unchanged documents should not be embedded again.
-    """
-
     try:
-        result = agent.rag.index_documents()
-
+        result = rag.index_documents()
         return {
             "status": "ok",
-            "message": "Doküman indeksleme tamamlandı.",
+            "message": "Document indexing completed.",
             "result": result,
         }
-
     except Exception as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Doküman indeksleme hatası: {exc}",
-        )
+        logging.exception("Document indexing failed.")
+        raise HTTPException(status_code=500, detail="Document indexing failed.") from exc
 
 
-# ---------------------------------------------------------------------
-# Chat
-# ---------------------------------------------------------------------
-
-@app.post(
-    "/chat",
-    response_model=QueryResponse,
-)
-def chat_endpoint(
-    request: QueryRequest,
-    db: Session = Depends(get_db),
-):
+@app.post("/chat", response_model=QueryResponse)
+def chat_endpoint(request: QueryRequest, db: Session = Depends(get_db)):
     try:
-        result = agent.run(
-            request.query
-        )
-
-        db_message = ChatMessage(
-            query=request.query,
-            answer=result.get(
-                "answer",
-                "",
-            ),
-        )
-
-        db.add(db_message)
+        result = agent.run(request.query)
+        db.add(ChatMessage(query=request.query, answer=result["answer"]))
         db.commit()
-
         return result
-
     except Exception as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=str(exc),
-        )
+        logging.exception("Chat request failed.")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Chat request failed.") from exc
